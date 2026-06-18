@@ -1,0 +1,135 @@
+@use 'sass:color';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+// ── Tokens ────────────────────────────────────────────────
+$primary:   #1E40AF;
+$primary-l: #3B82F6;
+$primary-d: #1E3A8A;
+$sidebar:   #0F1C3F;
+$accent:    #F59E0B;
+$success:   #10B981;
+$warning:   #F59E0B;
+$danger:    #EF4444;
+$surface:   #F8FAFC;
+
+$radius-sm: 6px;
+$radius:    10px;
+$radius-lg: 14px;
+
+$shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+$shadow:    0 4px 12px rgba(0,0,0,.08);
+
+// ── Reset ─────────────────────────────────────────────────
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: $surface;
+}
+
+// ── Mixins ────────────────────────────────────────────────
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin badge-variant($bg, $text) {
+  background-color: $bg;
+  color: $text;
+}
+
+@mixin btn-base {
+  @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-150;
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+// ── Sidebar nav links ──────────────────────────────────────
+.sidebar-link {
+  @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-150;
+  color: color.adjust(#93C5FD, $lightness: -5%);
+
+  &:hover {
+    color: #fff;
+    background: rgba(255,255,255,.1);
+  }
+
+  &.active {
+    background: $primary-l;
+    color: #fff;
+    box-shadow: $shadow-sm;
+  }
+}
+
+// ── Cards ─────────────────────────────────────────────────
+.card {
+  @apply bg-white rounded-xl border border-slate-100;
+  box-shadow: $shadow-sm;
+}
+
+.stat-card {
+  @extend .card;
+  @apply p-5 flex items-center justify-between;
+}
+
+// ── Badges ────────────────────────────────────────────────
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+}
+
+.badge-active    { @include badge-variant(#D1FAE5, #065F46); }
+.badge-expiring  { @include badge-variant(#FEF3C7, #92400E); }
+.badge-inactive  { @include badge-variant(#F1F5F9, #475569); }
+.badge-revoked   { @include badge-variant(#FEE2E2, #991B1B); }
+.badge-pending   { @include badge-variant(#FFEDD5, #9A3412); }
+
+// ── Buttons ───────────────────────────────────────────────
+.btn         { @include btn-base; }
+
+.btn-primary {
+  @include btn-base;
+  background: $primary-l;
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background: color.adjust($primary-l, $lightness: -6%);
+  }
+}
+
+.btn-outline {
+  @include btn-base;
+  @apply border border-slate-200 text-slate-700;
+
+  &:hover:not(:disabled) { background: #F8FAFC; }
+}
+
+.btn-danger {
+  @include btn-base;
+  background: $danger;
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background: color.adjust($danger, $lightness: -6%);
+  }
+}
+
+// ── Form controls ─────────────────────────────────────────
+.input {
+  @apply w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:focus {
+    outline: none;
+    border-color: $primary-l;
+    box-shadow: 0 0 0 3px rgba($primary-l, 0.15);
+  }
+}
+
+.label {
+  @apply block text-xs font-semibold uppercase tracking-wide mb-1;
+  color: #64748B;
+}
