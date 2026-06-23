@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+/* TripNest design tokens — exposed as Tailwind utilities (bg-brand, text-ink, …) */
+@theme {
+  --color-brand: #0f5132;
+  --color-brand-50: #e6f4ea;
+  --color-ink: #08060d;
+  --color-muted: #6b6375;
+}

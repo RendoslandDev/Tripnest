@@ -1,0 +1,55 @@
+import type { ReactNode } from 'react';
+import {
+  HomeIcon, SearchIcon, HeartIcon, CalendarIcon, MessageIcon, FileIcon, CardIcon,
+  BellIcon, UsersIcon, SparkleIcon, ToolIcon, UserCheckIcon, UserIcon, SettingsIcon, HelpIcon,
+} from './icons';
+
+export interface TenantNavItem {
+  label: string;
+  path: string;
+  icon: ReactNode;
+  badge?: number;
+}
+
+export interface TenantNavGroup {
+  heading?: string;
+  items: TenantNavItem[];
+}
+
+export const TENANT_NAV: TenantNavGroup[] = [
+  {
+    items: [{ label: 'Home', path: '/', icon: <HomeIcon /> }],
+  },
+  {
+    heading: 'Main',
+    items: [
+      { label: 'Search Properties', path: '/search', icon: <SearchIcon /> },
+      { label: 'Saved Listings', path: '/saved', icon: <HeartIcon /> },
+      { label: 'Bookings', path: '/bookings', icon: <CalendarIcon /> },
+      { label: 'Messages', path: '/messages', icon: <MessageIcon />, badge: 3 },
+      { label: 'Agreements', path: '/agreements', icon: <FileIcon /> },
+      { label: 'Payments', path: '/payments', icon: <CardIcon /> },
+      { label: 'Notifications', path: '/notifications', icon: <BellIcon />, badge: 6 },
+    ],
+  },
+  {
+    heading: 'Services',
+    items: [
+      { label: 'Caretakers', path: '/caretakers', icon: <UsersIcon /> },
+      { label: 'House Help', path: '/house-help', icon: <SparkleIcon /> },
+      { label: 'Maintenance', path: '/maintenance', icon: <ToolIcon /> },
+      { label: 'Agents', path: '/agents', icon: <UserCheckIcon /> },
+    ],
+  },
+  {
+    heading: 'Account',
+    items: [
+      { label: 'Profile', path: '/profile', icon: <UserIcon /> },
+      { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
+      { label: 'Help & Support', path: '/help', icon: <HelpIcon /> },
+    ],
+  },
+];
+
+/** Flat list of all tenant nav items, for route generation. */
+export const TENANT_NAV_ITEMS: TenantNavItem[] = TENANT_NAV.flatMap((g) => g.items);
