@@ -18,7 +18,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-/** Slide-over panel showing a reservation's trip details and payout breakdown. */
+//  Slide-over panel showing a reservation's trip details and payo1ut breakdown.
 export default function ReservationDetail({ reservation, onClose }: ReservationDetailProps) {
   const [tab, setTab] = useState<Tab>('details');
 
@@ -33,7 +33,7 @@ export default function ReservationDetail({ reservation, onClose }: ReservationD
         onClick={onClose}
         aria-hidden
       />
-      <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[440px] flex-col bg-white shadow-2xl">
+      <aside className="fixed inset-y-0 right-0 z-50 m-5 rounded-2xl flex w-full max-w-[440px] flex-col bg-white shadow-2xl">
         <header className="flex items-center justify-between px-8 pt-8 pb-4">
           <h2 className="text-2xl font-bold text-ink">Reservation Details</h2>
           <button

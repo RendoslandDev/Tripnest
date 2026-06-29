@@ -1,10 +1,7 @@
-// ---------------------------------------------------------------------------
-// Shared domain types for the TripNest management dashboard.
-// ---------------------------------------------------------------------------
 
 export type ReservationStatus = 'upcoming' | 'complete' | 'canceled';
 
-/** Routes that live inside the management dashboard sidebar. */
+
 export type NavPage =
   | 'overview'
   | 'reservations'
@@ -83,6 +80,12 @@ export interface PropertyAgent {
   phone: string;
 }
 
+//  Geographic coordinate
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+
 export interface Property {
   id: string;
   title: string;
@@ -99,6 +102,8 @@ export interface Property {
   baths: number;
   description: string;
   agent: PropertyAgent;
+//    Apartment position, used for maps, distance and routing.
+  coords: LatLng;
 }
 
 export interface TenantDashboard {
@@ -226,6 +231,104 @@ export interface PaymentMethod {
   primary: boolean;
 }
 
+
+// Payments: provider-backed transactions (Paystack). The browser only
+// initiates and reflects status — a server-side verify/webhook is the source
+//  of truth. See store/paymentStore.ts for the mock implementation.
+
+
+export type PaymentChannel = 'momo' | 'card';
+export type TransactionStatus = 'pending' | 'success' | 'failed' | 'refunded';
+
+export interface Transaction {
+  reference: string;
+  bookingId?: string;
+  amount: number;
+  currency: 'GHS';
+  channel: PaymentChannel;
+  provider: 'paystack';
+  status: TransactionStatus;
+  createdAt: string;
+}
+
+
+//  Landlord earnings & payouts (settlement of successful transactions).
+
+
+export type EarningStatus = 'settled' | 'pending';
+
+export interface EarningTxn {
+  id: string;
+  date: string;
+  guest: string;
+  listing: string;
+  gross: number;
+  fee: number;
+  net: number;
+  status: EarningStatus;
+}
+
+export interface EarningsSummary {
+  available: number;
+  pending: number;
+  thisMonth: number;
+  lifetime: number;
+  nextPayoutDate: string;
+  transactions: EarningTxn[];
+}
+
+//  Landlord workspace: inquiries, bookings, tenants, reviews.
+
+
+export type InquiryStatus = 'new' | 'replied' | 'archived';
+
+export interface Inquiry {
+  id: number;
+  guest: string;
+  listing: string;
+  message: string;
+  date: string;
+  status: InquiryStatus;
+}
+
+export type LandlordBookingStatus = 'pending' | 'confirmed' | 'checked-in' | 'completed' | 'cancelled';
+
+export interface LandlordBooking {
+  id: string;
+  guest: string;
+  listing: string;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  guests: number;
+  amount: number;
+  status: LandlordBookingStatus;
+}
+
+export type TenantStanding = 'current' | 'overdue' | 'ending-soon';
+
+export interface LandlordTenant {
+  id: string;
+  name: string;
+  property: string;
+  email: string;
+  phone: string;
+  since: string;
+  leaseEnd: string;
+  monthlyRent: number;
+  standing: TenantStanding;
+}
+
+export interface LandlordReview {
+  id: number;
+  guest: string;
+  listing: string;
+  rating: number;
+  date: string;
+  text: string;
+  reply?: string;
+}
+
 export type StatementStatus = 'paid' | 'pending';
 
 export interface Statement {
@@ -236,4 +339,157 @@ export interface Statement {
   managementFee: number;
   netPayout: number;
   status: StatementStatus;
+}
+
+//  Host dashboard: Listings
+
+
+export type ListingStatus = 'published' | 'unlisted' | 'draft' | 'snoozed';
+
+export interface Listing {
+  id: string;
+  title: string;
+  location: string;
+  type: string;
+  status: ListingStatus;
+  nightlyRate: number;
+  beds: number;
+  baths: number;
+  occupancyRate: number;
+  rating: number;
+  reviews: number;
+  coverColor: string;
+}
+
+//  Host dashboard: Tasks
+
+
+export type TaskType = 'cleaning' | 'maintenance' | 'inspection' | 'restock';
+export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskStatus = 'todo' | 'in-progress' | 'done';
+
+export interface HostTask {
+  id: number;
+  title: string;
+  property: string;
+  type: TaskType;
+  priority: TaskPriority;
+  status: TaskStatus;
+  dueDate: string;
+  assignee: string;
+}
+
+//  Host dashboard: My Trips
+
+
+export type TripStatus = 'upcoming' | 'completed' | 'canceled';
+
+export interface Trip {
+  id: string;
+  destination: string;
+  property: string;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  guests: number;
+  price: number;
+  status: TripStatus;
+  coverColor: string;
+}
+
+// Host dashboard: Users
+
+
+export type TeamRole = 'owner' | 'co-host' | 'cleaner' | 'maintenance' | 'agent';
+export type TeamUserStatus = 'active' | 'invited' | 'suspended';
+
+export interface TeamUser {
+  id: string;
+  name: string;
+  email: string;
+  role: TeamRole;
+  status: TeamUserStatus;
+  initials: string;
+  lastActive: string;
+  properties: number;
+}
+
+//  Host dashboard: Owner Exchange
+
+
+export type ExchangeCategory = 'Tips' | 'Suppliers' | 'Regulation' | 'Marketplace' | 'General';
+
+export interface ExchangePost {
+  id: number;
+  author: string;
+  role: string;
+  initials: string;
+  title: string;
+  body: string;
+  category: ExchangeCategory;
+  replies: number;
+  createdAt: string;
+  pinned: boolean;
+}
+
+//  Host dashboard: Resources
+
+
+export type ResourceCategory = 'guide' | 'policy' | 'template' | 'video';
+
+export interface Resource {
+  id: string;
+  title: string;
+  description: string;
+  category: ResourceCategory;
+  format: string;
+  url: string;
+}
+
+// Tenant marketplace: Virtual Tour
+
+
+export type HotspotCategory =
+  | 'bed'
+  | 'seating'
+  | 'kitchen'
+  | 'bathroom'
+  | 'storage'
+  | 'entertainment'
+  | 'view'
+  | 'outdoor'
+  | 'amenity'
+  | 'workspace'
+  | 'parking';
+
+//  A clickable point of interest pinned onto a tour scene (percent coords)
+export interface TourHotspot {
+  id: string;
+  x: number; // 0–100, % from left
+  y: number; // 0–100, % from top
+  label: string;
+  category: HotspotCategory;
+  detail: string;
+}
+
+//  One stop on the walkthrough — rendered as a cinematic scene placeholder
+//    until a real photo/video (`media`) is supplied per room.
+export interface TourRoom {
+  id: string;
+  name: string;
+  area: 'Entrance' | 'Indoor' | 'Outdoor' | 'Exterior';
+  caption: string;
+  dimensions?: string;
+//    Gradient stops for the placeholder scene (hex).
+  from: string;
+  to: string;
+//    Optional real media URL (image/video); falls back to the gradient scene.
+  media?: string;
+  hotspots: TourHotspot[];
+}
+
+export interface PropertyTour {
+  propertyId: string;
+  title: string;
+  rooms: TourRoom[];
 }

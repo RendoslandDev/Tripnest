@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import Button from '../../ui/Button';
 import {
   MapPinIcon, CalendarIcon, UserIcon, SearchIcon,
@@ -27,6 +28,7 @@ function SearchField({
 }
 
 export default function Hero() {
+  const navigate = useNavigate();
   return (
     <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-600 p-6 text-white sm:p-10">
       <h1 className="max-w-lg text-3xl font-bold sm:text-4xl">
@@ -42,7 +44,7 @@ export default function Hero() {
         <SearchField label="Check in – Check out" icon={<CalendarIcon size={18} />} value="May 20 – May 27" />
         <span className="hidden h-8 w-px bg-gray-200 sm:block" />
         <SearchField label="Guests" icon={<UserIcon size={18} />} value="2 Guests" />
-        <Button className="gap-2 sm:w-auto">
+        <Button className="gap-2 sm:w-auto" onClick={() => navigate('/search')}>
           <SearchIcon size={16} /> Search
         </Button>
       </div>

@@ -3,7 +3,7 @@ interface PagePlaceholderProps {
   description?: string;
 }
 
-/** Temporary stub for dashboard pages that are scaffolded but not yet built. */
+// Temporary stub for dashboard pages that are scaffolded but not yet built.
 export default function PagePlaceholder({ title, description }: PagePlaceholderProps) {
   return (
     <div>

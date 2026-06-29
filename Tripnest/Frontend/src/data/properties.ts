@@ -25,6 +25,7 @@ export const properties: Property[] = [
     description:
       'A modern, fully furnished 2-bedroom apartment in the heart of Newtown. Secure compound, reliable water and power, and a short drive to UMaT campus.',
     agent: AGENTS.kwame,
+    coords: { lat: 5.3009, lng: -1.9951 },
   },
   {
     id: '38821-PROP',
@@ -43,6 +44,7 @@ export const properties: Property[] = [
     description:
       'Affordable self-contained single room ideal for students. Walking distance to UMaT, with 24/7 security and a dedicated study desk.',
     agent: AGENTS.nana,
+    coords: { lat: 5.3105, lng: -2.0004 },
   },
   {
     id: '39921-PROP',
@@ -61,6 +63,7 @@ export const properties: Property[] = [
     description:
       'Spacious 3-bedroom family house in a quiet Aboso neighbourhood. Private parking, large kitchen and a fenced yard — perfect for long-term stays.',
     agent: AGENTS.yaw,
+    coords: { lat: 5.3554, lng: -1.9748 },
   },
   {
     id: '39500-PROP',
@@ -79,6 +82,7 @@ export const properties: Property[] = [
     description:
       'Cosy air-conditioned studio for short stays. Fully furnished with fast WiFi, close to markets and transport.',
     agent: AGENTS.kwame,
+    coords: { lat: 5.2981, lng: -1.9886 },
   },
   {
     id: '40110-PROP',
@@ -97,6 +101,7 @@ export const properties: Property[] = [
     description:
       'Budget-friendly shared hostel room close to campus. Includes WiFi, constant water supply and gated security.',
     agent: AGENTS.nana,
+    coords: { lat: 5.2952, lng: -2.0051 },
   },
   {
     id: '40233-PROP',
@@ -115,6 +120,7 @@ export const properties: Property[] = [
     description:
       'Bright, fully furnished 1-bedroom apartment with a fitted kitchen. Ideal for young professionals working in Tarkwa.',
     agent: AGENTS.yaw,
+    coords: { lat: 5.3024, lng: -1.9903 },
   },
   {
     id: '40391-PROP',
@@ -133,6 +139,7 @@ export const properties: Property[] = [
     description:
       'Premium executive apartment with air-conditioning throughout, secure parking and modern finishes in upscale Bankyim.',
     agent: AGENTS.kwame,
+    coords: { lat: 5.3082, lng: -1.9852 },
   },
   {
     id: '40455-PROP',
@@ -151,5 +158,6 @@ export const properties: Property[] = [
     description:
       'Comfortable guest house room in the town centre, great for short business trips. Air-conditioned with daily housekeeping.',
     agent: AGENTS.nana,
+    coords: { lat: 5.3011, lng: -1.9931 },
   },
 ];

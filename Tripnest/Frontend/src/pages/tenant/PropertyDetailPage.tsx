@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { Property } from '../../types';
 import { getPropertyById } from '../../api/properties';
@@ -7,50 +8,40 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
-import { formatCedi } from '../../lib/format';
+import BookingWidget from '../../components/tenant/BookingWidget';
+import VirtualTour from '../../components/tenant/tour/VirtualTour';
 import { AmenityIcon, ShieldIcon, StarIcon, MapPinIcon } from '../../components/tenant/icons';
 
-function Gallery() {
+function Gallery({ onPlay }: { onPlay: () => void }) {
   return (
     <div className="grid grid-cols-4 gap-2">
-      <div className="col-span-4 h-56 rounded-xl bg-gradient-to-br from-brand-50 to-gray-200 sm:h-72" />
+      <button
+        onClick={onPlay}
+        aria-label="Start virtual tour"
+        className="group relative col-span-4 h-56 overflow-hidden rounded-xl bg-gradient-to-br from-brand-50 to-gray-200 sm:h-72"
+      >
+        <span className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/15">
+          <span className="flex items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-sm font-semibold text-ink shadow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 5v14l11-7z" /></svg>
+            Start virtual tour
+          </span>
+        </span>
+      </button>
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="h-20 rounded-lg bg-gradient-to-br from-brand-50 to-gray-200" />
+        <button
+          key={i}
+          onClick={onPlay}
+          aria-label="Start virtual tour"
+          className="h-20 rounded-lg bg-gradient-to-br from-brand-50 to-gray-200 transition-opacity hover:opacity-90"
+        />
       ))}
     </div>
   );
 }
 
-function BookingWidget({ property }: { property: Property }) {
-  return (
-    <Card className="sticky top-20 p-5">
-      <p className="text-2xl font-bold text-brand">
-        {formatCedi(property.price)}
-        <span className="text-sm font-normal text-muted"> / {property.period}</span>
-      </p>
-
-      <div className="mt-4 space-y-2">
-        <div className="rounded-lg border border-gray-200 px-3 py-2">
-          <p className="text-[11px] text-muted">Check in – Check out</p>
-          <p className="text-sm font-medium text-ink">May 20 – May 27</p>
-        </div>
-        <div className="rounded-lg border border-gray-200 px-3 py-2">
-          <p className="text-[11px] text-muted">Guests</p>
-          <p className="text-sm font-medium text-ink">2 Guests</p>
-        </div>
-      </div>
-
-      <Button className="mt-4 w-full">
-        {property.tag === 'Instant Book' ? 'Instant Book' : 'Request to Book'}
-      </Button>
-      <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted">
-        <ShieldIcon size={13} className="text-brand" /> Secure payment via Mobile Money
-      </p>
-    </Card>
-  );
-}
-
 function Detail({ property }: { property: Property }) {
+  const [tourOpen, setTourOpen] = useState(false);
+
   return (
     <div>
       <Link to="/search" className="text-sm font-semibold text-brand no-underline">
@@ -59,7 +50,7 @@ function Detail({ property }: { property: Property }) {
 
       <div className="mt-4 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_340px]">
         <div className="min-w-0 space-y-6">
-          <Gallery />
+          <Gallery onPlay={() => setTourOpen(true)} />
 
           <div>
             <div className="flex flex-wrap items-center gap-3">
@@ -118,6 +109,8 @@ function Detail({ property }: { property: Property }) {
           <BookingWidget property={property} />
         </aside>
       </div>
+
+      {tourOpen && <VirtualTour propertyId={property.id} onClose={() => setTourOpen(false)} />}
     </div>
   );
 }

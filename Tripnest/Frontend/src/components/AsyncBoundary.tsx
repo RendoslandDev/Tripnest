@@ -4,14 +4,14 @@ import type { AsyncState } from '../hooks/useAsync';
 interface AsyncBoundaryProps<T> {
   state: AsyncState<T>;
   children: (data: T) => ReactNode;
-  /** Return true to show the empty state instead of children. */
+//   Return true to show the empty state instead of children.
   isEmpty?: (data: T) => boolean;
   loadingMessage?: string;
   errorMessage?: string;
   emptyMessage?: string;
 }
 
-/** Renders consistent loading / error / empty / data states for useAsync. */
+// Renders consistent loading / error / empty / data states for useAsync.
 export default function AsyncBoundary<T>({
   state,
   children,

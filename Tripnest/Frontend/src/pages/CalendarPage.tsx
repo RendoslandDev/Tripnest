@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CalendarMonth } from '../types';
 import { getCalendarMonth } from '../api/calendar';
 import { useAsync } from '../hooks/useAsync';
@@ -14,13 +14,13 @@ const MAINT_HATCH =
   'bg-[repeating-linear-gradient(45deg,#fecaca_0,#fecaca_5px,transparent_5px,transparent_10px)]';
 
 const Moon = () => (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
   </svg>
 );
 
 const Globe = () => (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" focusable="false">
     <circle cx="12" cy="12" r="10" />
     <line x1="2" y1="12" x2="22" y2="12" />
     <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
@@ -163,13 +163,26 @@ function CalendarGrid({ month }: { month: CalendarMonth }) {
 
 export default function CalendarPage() {
   const state = useAsync(() => getCalendarMonth(), []);
+  const [blocking, setBlocking] = useState(false);
+
+  useEffect(() => {
+    if (!blocking) return;
+    const t = setTimeout(() => setBlocking(false), 4000);
+    return () => clearTimeout(t);
+  }, [blocking]);
 
   return (
     <div>
       <div className="mb-8 flex items-center justify-between">
         <h1 className="text-4xl font-bold text-ink">Calendar</h1>
-        <Button variant="dark">Book dates for yourself</Button>
+        <Button variant="dark" onClick={() => setBlocking(true)}>Book dates for yourself</Button>
       </div>
+
+      {blocking && (
+        <div className="mb-6 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
+          Owner-booking mode: pick the days on the calendar below to block them for personal use.
+        </div>
+      )}
 
       <AsyncBoundary
         state={state}

@@ -3,15 +3,16 @@ import {
   MenuIcon, SearchIcon, MapPinIcon, BellIcon, MailIcon, ChevronDownIcon,
 } from './icons';
 import { currentUser } from '../../data/user';
+import { useSession } from '../../store/authStore';
 import Avatar from '../ui/Avatar';
 
 interface TopBarProps {
   onMenu: () => void;
 }
 
-function IconButton({ children, count, label }: { children: React.ReactNode; count?: number; label: string }) {
+function IconButton({ children, count, label, onClick }: { children: React.ReactNode; count?: number; label: string; onClick?: () => void }) {
   return (
-    <button aria-label={label} className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100">
+    <button onClick={onClick} aria-label={label} className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100">
       {children}
       {count != null && (
         <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold text-white">
@@ -25,7 +26,9 @@ function IconButton({ children, count, label }: { children: React.ReactNode; cou
 export default function TopBar({ onMenu }: TopBarProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const session = useSession();
   const isLandlord = location.pathname.startsWith('/landlord');
+  const displayName = session?.name ?? currentUser.name;
 
   return (
     <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3">
@@ -44,6 +47,7 @@ export default function TopBar({ onMenu }: TopBarProps) {
         <input
           type="search"
           placeholder="Search location, property ID or keyword..."
+          onKeyDown={(e) => e.key === 'Enter' && navigate('/search')}
           className="w-full rounded-full border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-ink outline-none focus:border-brand"
         />
       </div>
@@ -54,8 +58,8 @@ export default function TopBar({ onMenu }: TopBarProps) {
           {currentUser.location}
         </span>
 
-        <IconButton label="Notifications" count={6}><BellIcon size={20} /></IconButton>
-        <IconButton label="Messages" count={3}><MailIcon size={20} /></IconButton>
+        <IconButton label="Notifications" count={6} onClick={() => navigate('/notifications')}><BellIcon size={20} /></IconButton>
+        <IconButton label="Messages" count={3} onClick={() => navigate('/messages')}><MailIcon size={20} /></IconButton>
 
         <div className="flex rounded-lg border border-gray-200 p-0.5 text-sm font-medium">
           <button
@@ -76,8 +80,8 @@ export default function TopBar({ onMenu }: TopBarProps) {
           </button>
         </div>
 
-        <button className="flex items-center gap-1.5">
-          <Avatar name={currentUser.name} size={36} />
+        <button onClick={() => navigate('/profile')} aria-label="Account" className="flex items-center gap-1.5">
+          <Avatar name={displayName} size={36} />
           <ChevronDownIcon size={16} className="hidden text-muted sm:block" />
         </button>
       </div>

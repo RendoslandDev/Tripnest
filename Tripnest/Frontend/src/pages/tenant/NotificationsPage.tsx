@@ -1,4 +1,5 @@
-import type { NotificationType } from '../../types';
+import { useState } from 'react';
+import type { Notification, NotificationType } from '../../types';
 import { getNotifications } from '../../api/notifications';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
@@ -15,6 +16,51 @@ const ICONS: Record<NotificationType, React.ReactNode> = {
   safety: <ShieldIcon size={18} />,
 };
 
+function NotificationsView({ initial }: { initial: Notification[] }) {
+  const [rows, setRows] = useState(initial);
+  const unread = rows.filter((n) => !n.read).length;
+
+  const markAllRead = () => setRows((rs) => rs.map((n) => ({ ...n, read: true })));
+  const markRead = (id: number) =>
+    setRows((rs) => rs.map((n) => (n.id === id ? { ...n, read: true } : n)));
+
+  return (
+    <>
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-sm text-muted">
+          {unread > 0 ? `${unread} unread` : 'All caught up'}
+        </p>
+        {unread > 0 && (
+          <button onClick={markAllRead} className="text-sm font-semibold text-brand hover:underline">
+            Mark all read
+          </button>
+        )}
+      </div>
+      <Card className="divide-y divide-gray-100 overflow-hidden">
+        {rows.map((n) => (
+          <button
+            key={n.id}
+            onClick={() => markRead(n.id)}
+            className={`flex w-full gap-3 px-5 py-4 text-left transition-colors hover:bg-gray-50 ${n.read ? '' : 'bg-brand-50/40'}`}
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand">
+              {ICONS[n.type]}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-semibold text-ink">{n.title}</p>
+                <span className="shrink-0 text-xs text-muted">{n.time}</span>
+              </div>
+              <p className="text-sm text-muted">{n.body}</p>
+            </div>
+            {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand" />}
+          </button>
+        ))}
+      </Card>
+    </>
+  );
+}
+
 export default function NotificationsPage() {
   const state = useAsync(getNotifications, []);
 
@@ -29,25 +75,7 @@ export default function NotificationsPage() {
         emptyMessage="You're all caught up."
         isEmpty={(rows) => rows.length === 0}
       >
-        {(rows) => (
-          <Card className="divide-y divide-gray-100 overflow-hidden">
-            {rows.map((n) => (
-              <div key={n.id} className={`flex gap-3 px-5 py-4 ${n.read ? '' : 'bg-brand-50/40'}`}>
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand">
-                  {ICONS[n.type]}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-semibold text-ink">{n.title}</p>
-                    <span className="shrink-0 text-xs text-muted">{n.time}</span>
-                  </div>
-                  <p className="text-sm text-muted">{n.body}</p>
-                </div>
-                {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand" />}
-              </div>
-            ))}
-          </Card>
-        )}
+        {(rows) => <NotificationsView initial={rows} />}
       </AsyncBoundary>
     </div>
   );

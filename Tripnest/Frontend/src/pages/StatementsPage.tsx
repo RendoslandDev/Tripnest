@@ -1,4 +1,4 @@
-import type { StatementStatus } from '../types';
+import type { Statement, StatementStatus } from '../types';
 import { getStatements } from '../api/statements';
 import { useAsync } from '../hooks/useAsync';
 import AsyncBoundary from '../components/AsyncBoundary';
@@ -11,6 +11,26 @@ const STATUS_TONE: Record<StatementStatus, BadgeTone> = {
   paid: 'green',
   pending: 'amber',
 };
+
+//  Render a statement as plain text and trigger a browser download.
+function downloadStatement(s: Statement) {
+  const body = [
+    'TRIPNEST HOST STATEMENT',
+    '=======================',
+    `Month:           ${s.month}`,
+    `Period:          ${s.period}`,
+    `Gross revenue:   ${formatCurrency(s.grossRevenue)}`,
+    `Management fee:  ${formatCurrency(s.managementFee)}`,
+    `Net payout:      ${formatCurrency(s.netPayout)}`,
+    `Status:          ${s.status === 'paid' ? 'Paid' : 'Pending'}`,
+  ].join('\n');
+  const url = URL.createObjectURL(new Blob([body], { type: 'text/plain' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `statement-${s.month.replace(/\s+/g, '-').toLowerCase()}.txt`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function StatementsPage() {
   const state = useAsync(getStatements, []);
@@ -54,7 +74,7 @@ export default function StatementsPage() {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Button variant="ghost" size="sm">Download</Button>
+                      <Button variant="ghost" size="sm" onClick={() => downloadStatement(s)}>Download</Button>
                     </td>
                   </tr>
                 ))}

@@ -10,16 +10,17 @@ import Badge from '../../ui/Badge';
 import Avatar from '../../ui/Avatar';
 import Toggle from '../../ui/Toggle';
 import { formatCedi } from '../../../lib/format';
+import { currentUser } from '../../../data/user';
 import {
   CalendarIcon, CardIcon, HeartIcon, ToolIcon, SearchIcon, PlusIcon, MessageIcon, BellIcon,
 } from '../icons';
 
 const QUICK_ACTIONS = [
-  { label: 'Search Properties', icon: <SearchIcon size={16} /> },
-  { label: 'Add Property', icon: <PlusIcon size={16} /> },
-  { label: 'Messages', icon: <MessageIcon size={16} /> },
-  { label: 'Make Payment', icon: <CardIcon size={16} /> },
-  { label: 'Report an Issue', icon: <ToolIcon size={16} /> },
+  { label: 'Search Properties', icon: <SearchIcon size={16} />, to: '/search' },
+  { label: 'Add Property', icon: <PlusIcon size={16} />, to: '/landlord' },
+  { label: 'Messages', icon: <MessageIcon size={16} />, to: '/messages' },
+  { label: 'Make Payment', icon: <CardIcon size={16} />, to: '/payments' },
+  { label: 'Report an Issue', icon: <ToolIcon size={16} />, to: '/maintenance' },
 ];
 
 function Stat({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
@@ -36,6 +37,15 @@ function Stat({ label, value, icon }: { label: string; value: string; icon: Reac
 
 function Rail({ data }: { data: TenantDashboard }) {
   const [smsOn, setSmsOn] = useState(true);
+  const [invited, setInvited] = useState(false);
+
+  const invite = () => {
+    const link = `${window.location.origin}/?ref=${encodeURIComponent(currentUser.name.split(' ')[0].toLowerCase())}`;
+    navigator.clipboard?.writeText(link).catch(() => {});
+    setInvited(true);
+    setTimeout(() => setInvited(false), 2500);
+  };
+
   return (
     <div className="space-y-5">
       <Card className="p-5">
@@ -65,7 +75,9 @@ function Rail({ data }: { data: TenantDashboard }) {
             {formatCedi(data.upcoming.price)}
             <span className="text-xs font-normal text-muted"> / {data.upcoming.period}</span>
           </span>
-          <Button size="sm">View Booking</Button>
+          <Link to="/bookings" className="no-underline">
+            <Button size="sm">View Booking</Button>
+          </Link>
         </div>
       </Card>
 
@@ -73,13 +85,14 @@ function Rail({ data }: { data: TenantDashboard }) {
         <h3 className="mb-3 font-bold text-ink">Quick Actions</h3>
         <div className="grid grid-cols-1 gap-2">
           {QUICK_ACTIONS.map((a) => (
-            <button
+            <Link
               key={a.label}
-              className="flex items-center gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              to={a.to}
+              className="flex items-center gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm font-medium text-gray-700 no-underline hover:bg-gray-50"
             >
               <span className="text-brand">{a.icon}</span>
               {a.label}
-            </button>
+            </Link>
           ))}
         </div>
       </Card>
@@ -112,7 +125,9 @@ function Rail({ data }: { data: TenantDashboard }) {
       <Card className="bg-brand p-5 text-white">
         <h3 className="font-bold">Invite &amp; Earn</h3>
         <p className="mt-1 text-sm text-white/80">Invite your friends and earn up to GH₵ 100!</p>
-        <Button className="mt-3 bg-white text-brand hover:bg-white/90" size="sm">Invite Now</Button>
+        <Button className="mt-3 bg-white text-brand hover:bg-white/90" size="sm" onClick={invite}>
+          {invited ? 'Link copied!' : 'Invite Now'}
+        </Button>
       </Card>
 
       <Card className="p-5">

@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { ServiceProvider } from '../../types';
 import { formatCedi } from '../../lib/format';
 import Card from '../ui/Card';
@@ -7,6 +9,15 @@ import Avatar from '../ui/Avatar';
 import { ShieldIcon, StarIcon, MapPinIcon } from './icons';
 
 export default function ProviderCard({ provider }: { provider: ServiceProvider }) {
+  const navigate = useNavigate();
+  const [requested, setRequested] = useState(false);
+
+  const request = () => {
+    setRequested(true);
+    // Hand off to messaging so the tenant can chat with the provider.
+    setTimeout(() => navigate('/messages'), 600);
+  };
+
   return (
     <Card className="flex flex-col p-5">
       <div className="flex items-center gap-3">
@@ -53,7 +64,9 @@ export default function ProviderCard({ provider }: { provider: ServiceProvider }
             </>
           )}
         </span>
-        <Button size="sm">Request</Button>
+        <Button size="sm" onClick={request} disabled={requested}>
+          {requested ? 'Requested ✓' : 'Request'}
+        </Button>
       </div>
     </Card>
   );

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
   HomeIcon, SearchIcon, HeartIcon, CalendarIcon, MessageIcon, FileIcon, CardIcon,
   BellIcon, UsersIcon, SparkleIcon, ToolIcon, UserCheckIcon, UserIcon, SettingsIcon, HelpIcon,
+  MapPinIcon,
 } from './icons';
 
 export interface TenantNavItem {
@@ -24,6 +25,7 @@ export const TENANT_NAV: TenantNavGroup[] = [
     heading: 'Main',
     items: [
       { label: 'Search Properties', path: '/search', icon: <SearchIcon /> },
+      { label: 'Nearby', path: '/nearby', icon: <MapPinIcon /> },
       { label: 'Saved Listings', path: '/saved', icon: <HeartIcon /> },
       { label: 'Bookings', path: '/bookings', icon: <CalendarIcon /> },
       { label: 'Messages', path: '/messages', icon: <MessageIcon />, badge: 3 },

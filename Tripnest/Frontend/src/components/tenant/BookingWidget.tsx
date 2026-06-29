@@ -1,0 +1,147 @@
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import type { Property } from '../../types';
+import Card from '../ui/Card';
+import Button from '../ui/Button';
+import { formatCedi } from '../../lib/format';
+import { quotePrice } from '../../store/bookingStore';
+import { ShieldIcon } from './icons';
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addDaysISO(iso: string, days: number): string {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+export interface BookingSelection {
+  checkInISO: string;
+  checkOutISO: string;
+  guests: number;
+}
+
+/** Interactive reserve widget: pick dates + guests, see a live quote. */
+export default function BookingWidget({ property }: { property: Property }) {
+  const navigate = useNavigate();
+  const defaultIn = todayISO();
+  const defaultNights = property.period === 'month' ? 30 : 7;
+
+  const [checkInISO, setCheckInISO] = useState(defaultIn);
+  const [checkOutISO, setCheckOutISO] = useState(addDaysISO(defaultIn, defaultNights));
+  const [guests, setGuests] = useState(2);
+
+  const quote = useMemo(
+    () => quotePrice(property, checkInISO, checkOutISO),
+    [property, checkInISO, checkOutISO],
+  );
+
+  const valid = quote.nights > 0;
+  const minCheckOut = addDaysISO(checkInISO, 1);
+
+  const reserve = () => {
+    if (!valid) return;
+    const selection: BookingSelection = { checkInISO, checkOutISO, guests };
+    navigate(`/checkout/${property.id}`, { state: selection });
+  };
+
+  return (
+    <Card className="sticky top-20 p-5">
+      <p className="text-2xl font-bold text-brand">
+        {formatCedi(property.price)}
+        <span className="text-sm font-normal text-muted"> / {property.period}</span>
+      </p>
+
+      <div className="mt-4 space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <label className="rounded-lg border border-gray-200 px-3 py-2">
+            <span className="block text-[11px] text-muted">Check in</span>
+            <input
+              type="date"
+              value={checkInISO}
+              min={todayISO()}
+              onChange={(e) => {
+                const next = e.target.value;
+                setCheckInISO(next);
+                if (next >= checkOutISO) setCheckOutISO(addDaysISO(next, defaultNights));
+              }}
+              className="w-full bg-transparent text-sm font-medium text-ink outline-none"
+            />
+          </label>
+          <label className="rounded-lg border border-gray-200 px-3 py-2">
+            <span className="block text-[11px] text-muted">Check out</span>
+            <input
+              type="date"
+              value={checkOutISO}
+              min={minCheckOut}
+              onChange={(e) => setCheckOutISO(e.target.value)}
+              className="w-full bg-transparent text-sm font-medium text-ink outline-none"
+            />
+          </label>
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+          <div>
+            <p className="text-[11px] text-muted">Guests</p>
+            <p className="text-sm font-medium text-ink">
+              {guests} Guest{guests > 1 ? 's' : ''}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setGuests((g) => Math.max(1, g - 1))}
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 text-ink disabled:opacity-40"
+              disabled={guests <= 1}
+              aria-label="Decrease guests"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              onClick={() => setGuests((g) => Math.min(16, g + 1))}
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 text-ink disabled:opacity-40"
+              disabled={guests >= 16}
+              aria-label="Increase guests"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {valid && (
+        <div className="mt-4 space-y-1.5 text-sm">
+          <div className="flex justify-between text-muted">
+            <span>
+              {formatCedi(quote.perNight)} × {quote.nights} night{quote.nights > 1 ? 's' : ''}
+            </span>
+            <span className="text-ink">{formatCedi(quote.subtotal)}</span>
+          </div>
+          <div className="flex justify-between text-muted">
+            <span>Service fee</span>
+            <span className="text-ink">{formatCedi(quote.serviceFee)}</span>
+          </div>
+          <div className="flex justify-between border-t border-gray-100 pt-1.5 font-semibold text-ink">
+            <span>Total</span>
+            <span>{formatCedi(quote.total)}</span>
+          </div>
+        </div>
+      )}
+
+      <Button className="mt-4 w-full" onClick={reserve} disabled={!valid}>
+        {property.tag === 'Instant Book' ? 'Instant Book' : 'Reserve'}
+      </Button>
+      {!valid && (
+        <p className="mt-2 text-center text-xs text-rose-600">
+          Check-out must be after check-in.
+        </p>
+      )}
+      <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted">
+        <ShieldIcon size={13} className="text-brand" /> Secure payment via Mobile Money
+      </p>
+    </Card>
+  );
+}

@@ -1,0 +1,53 @@
+import type { Trip } from '../types';
+
+// Mock trips the host has booked as a guest. Swap for API data later.
+export const trips: Trip[] = [
+  {
+    id: 't1',
+    destination: 'Cape Coast',
+    property: 'Oceanview Heritage Suite',
+    checkIn: 'Jul 12, 2025',
+    checkOut: 'Jul 15, 2025',
+    nights: 3,
+    guests: 2,
+    price: 540,
+    status: 'upcoming',
+    coverColor: '#bae6fd',
+  },
+  {
+    id: 't2',
+    destination: 'Kumasi',
+    property: 'Garden City Apartment',
+    checkIn: 'Aug 2, 2025',
+    checkOut: 'Aug 5, 2025',
+    nights: 3,
+    guests: 1,
+    price: 285,
+    status: 'upcoming',
+    coverColor: '#fbcfe8',
+  },
+  {
+    id: 't3',
+    destination: 'Ada Foah',
+    property: 'Riverside Eco Lodge',
+    checkIn: 'May 9, 2025',
+    checkOut: 'May 11, 2025',
+    nights: 2,
+    guests: 4,
+    price: 410,
+    status: 'completed',
+    coverColor: '#bbf7d0',
+  },
+  {
+    id: 't4',
+    destination: 'Takoradi',
+    property: 'Harbor Lights Studio',
+    checkIn: 'Mar 18, 2025',
+    checkOut: 'Mar 20, 2025',
+    nights: 2,
+    guests: 2,
+    price: 230,
+    status: 'canceled',
+    coverColor: '#fed7aa',
+  },
+];

@@ -1,4 +1,5 @@
-import type { AgreementStatus } from '../../types';
+import { useState } from 'react';
+import type { Agreement, AgreementStatus } from '../../types';
 import { getAgreements } from '../../api/agreements';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
@@ -14,6 +15,68 @@ const STATUS: Record<AgreementStatus, { tone: BadgeTone; label: string }> = {
   expired: { tone: 'gray', label: 'Expired' },
 };
 
+/** Render an agreement as plain text and trigger a browser download. */
+function downloadAgreement(a: Agreement) {
+  const body = [
+    'TRIPNEST TENANCY AGREEMENT',
+    '==========================',
+    `Reference: ${a.id}`,
+    `Property:  ${a.property}`,
+    `Landlord:  ${a.landlord}`,
+    `Term:      ${a.startDate} – ${a.endDate}`,
+    `Rent:      GH₵ ${a.rent.toLocaleString('en-GH')} / ${a.period}`,
+    `Status:    ${STATUS[a.status].label}`,
+  ].join('\n');
+  const url = URL.createObjectURL(new Blob([body], { type: 'text/plain' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${a.id}-agreement.txt`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function AgreementsView({ initial }: { initial: Agreement[] }) {
+  const [rows, setRows] = useState(initial);
+
+  const sign = (id: string) =>
+    setRows((rs) => rs.map((a) => (a.id === id ? { ...a, status: 'active' } : a)));
+
+  return (
+    <div className="space-y-4">
+      {rows.map((a) => (
+        <Card key={a.id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand">
+            <FileIcon size={22} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-ink">{a.property}</h3>
+              <Badge tone={STATUS[a.status].tone}>{STATUS[a.status].label}</Badge>
+            </div>
+            <p className="text-xs text-muted">{a.id} · Landlord: {a.landlord}</p>
+            <p className="mt-1 text-sm text-muted">
+              {a.startDate} – {a.endDate} · {formatCedi(a.rent)} / {a.period}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {a.status === 'pending' ? (
+              <>
+                <Button size="sm" onClick={() => sign(a.id)}>Review &amp; sign</Button>
+                <Button size="sm" variant="ghost" onClick={() => downloadAgreement(a)}>Download</Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" variant="ghost" onClick={() => downloadAgreement(a)}>View</Button>
+                <Button size="sm" variant="ghost" onClick={() => downloadAgreement(a)}>Download</Button>
+              </>
+            )}
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 export default function AgreementsPage() {
   const state = useAsync(getAgreements, []);
 
@@ -28,37 +91,7 @@ export default function AgreementsPage() {
         emptyMessage="You have no agreements yet."
         isEmpty={(rows) => rows.length === 0}
       >
-        {(rows) => (
-          <div className="space-y-4">
-            {rows.map((a) => (
-              <Card key={a.id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand">
-                  <FileIcon size={22} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-ink">{a.property}</h3>
-                    <Badge tone={STATUS[a.status].tone}>{STATUS[a.status].label}</Badge>
-                  </div>
-                  <p className="text-xs text-muted">{a.id} · Landlord: {a.landlord}</p>
-                  <p className="mt-1 text-sm text-muted">
-                    {a.startDate} – {a.endDate} · {formatCedi(a.rent)} / {a.period}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  {a.status === 'pending' ? (
-                    <Button size="sm">Review &amp; sign</Button>
-                  ) : (
-                    <>
-                      <Button size="sm" variant="ghost">View</Button>
-                      <Button size="sm" variant="ghost">Download</Button>
-                    </>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
+        {(rows) => <AgreementsView initial={rows} />}
       </AsyncBoundary>
     </div>
   );

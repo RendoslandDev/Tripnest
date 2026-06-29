@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { ChatIcon, MailIcon, PhoneIcon, ChevronDownIcon } from '../../components/tenant/icons';
@@ -26,27 +27,40 @@ function Faq({ q, a }: { q: string; a: string }) {
   );
 }
 
-function ContactCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <Card className="flex items-center gap-3 p-4">
+function ContactCard({ icon, label, value, href, onClick }: {
+  icon: React.ReactNode; label: string; value: string; href?: string; onClick?: () => void;
+}) {
+  const inner = (
+    <>
       <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand">{icon}</span>
-      <div>
+      <div className="text-left">
         <p className="text-sm text-muted">{label}</p>
         <p className="font-semibold text-ink">{value}</p>
       </div>
+    </>
+  );
+  const cls = 'flex w-full items-center gap-3 p-4 no-underline transition-shadow hover:shadow-md';
+  return (
+    <Card className="overflow-hidden">
+      {href ? (
+        <a href={href} className={cls}>{inner}</a>
+      ) : (
+        <button type="button" onClick={onClick} className={cls}>{inner}</button>
+      )}
     </Card>
   );
 }
 
 export default function HelpPage() {
+  const navigate = useNavigate();
   return (
     <div className="max-w-3xl">
       <h1 className="mb-6 text-3xl font-bold text-ink">Help &amp; Support</h1>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <ContactCard icon={<ChatIcon size={18} />} label="Live chat" value="Chat with us" />
-        <ContactCard icon={<MailIcon size={18} />} label="Email" value="help@tripnest.gh" />
-        <ContactCard icon={<PhoneIcon size={18} />} label="Phone" value="+233 24 123 4567" />
+        <ContactCard icon={<ChatIcon size={18} />} label="Live chat" value="Chat with us" onClick={() => navigate('/messages')} />
+        <ContactCard icon={<MailIcon size={18} />} label="Email" value="help@tripnest.gh" href="mailto:help@tripnest.gh" />
+        <ContactCard icon={<PhoneIcon size={18} />} label="Phone" value="+233 24 123 4567" href="tel:+233241234567" />
       </div>
 
       <Card className="p-6">
@@ -59,7 +73,7 @@ export default function HelpPage() {
         <div className="mt-5 rounded-xl bg-brand-50 p-4">
           <p className="font-semibold text-ink">Still need help?</p>
           <p className="mb-3 text-sm text-muted">Our support team replies within minutes during business hours.</p>
-          <Button size="sm">Contact support</Button>
+          <Button size="sm" onClick={() => navigate('/messages')}>Contact support</Button>
         </div>
       </Card>
     </div>

@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { TENANT_NAV } from './navConfig';
 import { HexIcon, ChevronDownIcon } from './icons';
 import { currentUser } from '../../data/user';
+import { useSession } from '../../store/authStore';
 import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
 
@@ -16,6 +17,8 @@ const inactiveItem = 'text-gray-600 hover:bg-gray-100 hover:text-gray-900';
 const activeItem = 'bg-brand-50 text-brand';
 
 export default function TenantSidebar({ open, onClose }: TenantSidebarProps) {
+  const session = useSession();
+  const name = session?.name ?? currentUser.name;
   return (
     <>
       {open && (
@@ -76,19 +79,25 @@ export default function TenantSidebar({ open, onClose }: TenantSidebarProps) {
           <p className="mt-1 text-xs text-white/80">
             List your property and start earning today!
           </p>
-          <Button className="mt-3 bg-white text-brand hover:bg-white/90" size="sm">
-            Get Started
-          </Button>
+          <NavLink to="/landlord" onClick={onClose} className="no-underline">
+            <Button className="mt-3 bg-white text-brand hover:bg-white/90" size="sm">
+              Get Started
+            </Button>
+          </NavLink>
         </div>
 
-        <button className="mt-4 flex w-full items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 text-left">
-          <Avatar name={currentUser.name} size={36} />
+        <NavLink
+          to="/profile"
+          onClick={onClose}
+          className="mt-4 flex w-full items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 text-left no-underline"
+        >
+          <Avatar name={name} size={36} />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold text-ink">{currentUser.name}</span>
+            <span className="block truncate text-sm font-semibold text-ink">{name}</span>
             <span className="block text-xs text-muted">{currentUser.role}</span>
           </span>
           <ChevronDownIcon size={16} className="text-muted" />
-        </button>
+        </NavLink>
       </aside>
     </>
   );

@@ -41,10 +41,10 @@ export default function Footer() {
 
         <div className="flex items-center gap-3 text-muted">
           <span className="text-sm">Follow us</span>
-          <a href="#" className="hover:text-ink"><FacebookIcon size={18} /></a>
-          <a href="#" className="hover:text-ink"><InstagramIcon size={18} /></a>
-          <a href="#" className="hover:text-ink"><TwitterIcon size={18} /></a>
-          <a href="#" className="hover:text-ink"><LinkedinIcon size={18} /></a>
+          <a href="#" aria-label="TripNest on Facebook" className="hover:text-ink"><FacebookIcon size={18} /></a>
+          <a href="#" aria-label="TripNest on Instagram" className="hover:text-ink"><InstagramIcon size={18} /></a>
+          <a href="#" aria-label="TripNest on Twitter" className="hover:text-ink"><TwitterIcon size={18} /></a>
+          <a href="#" aria-label="TripNest on LinkedIn" className="hover:text-ink"><LinkedinIcon size={18} /></a>
         </div>
       </div>
     </footer>

@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Toggle from '../../components/ui/Toggle';
 import { LogOutIcon } from '../../components/tenant/icons';
+import { signOut } from '../../store/authStore';
 
 function ToggleRow({
   label, desc, value, onChange,
@@ -19,9 +21,18 @@ function ToggleRow({
 }
 
 export default function SettingsPage() {
+  const navigate = useNavigate();
   const [prefs, setPrefs] = useState({ email: true, sms: true, push: false });
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
   const set = (key: keyof typeof prefs) => (value: boolean) =>
     setPrefs((p) => ({ ...p, [key]: value }));
+
+  const savePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangingPassword(false);
+    setPasswordSaved(true);
+  };
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -59,12 +70,40 @@ export default function SettingsPage() {
 
       <Card className="p-6">
         <h2 className="mb-4 text-lg font-bold text-ink">Account</h2>
-        <div className="flex flex-wrap gap-3">
-          <Button variant="ghost">Change password</Button>
-          <Button variant="ghost" className="text-rose-600 hover:bg-rose-50">
-            <LogOutIcon size={16} /> <span className="ml-1.5">Log out</span>
-          </Button>
-        </div>
+        {changingPassword ? (
+          <form onSubmit={savePassword} className="max-w-sm space-y-3">
+            <input
+              type="password"
+              required
+              placeholder="Current password"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink outline-none focus:border-brand"
+            />
+            <input
+              type="password"
+              required
+              placeholder="New password"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink outline-none focus:border-brand"
+            />
+            <div className="flex gap-2">
+              <Button type="submit" size="sm">Update password</Button>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setChangingPassword(false)}>Cancel</Button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3">
+            <Button variant="ghost" onClick={() => { setChangingPassword(true); setPasswordSaved(false); }}>
+              Change password
+            </Button>
+            {passwordSaved && <span className="text-sm font-medium text-brand">Password updated</span>}
+            <Button
+              variant="ghost"
+              className="text-rose-600 hover:bg-rose-50"
+              onClick={() => { signOut(); navigate('/welcome'); }}
+            >
+              <LogOutIcon size={16} /> <span className="ml-1.5">Log out</span>
+            </Button>
+          </div>
+        )}
       </Card>
     </div>
   );
