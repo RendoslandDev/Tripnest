@@ -1,8 +1,147 @@
 import type { ServiceProvider } from '../types';
-import { providers } from '../data/providers';
-import { mockResponse } from './client';
+import { providers as mockProviders } from '../data/providers';
+import { apiGet, apiPost } from './client';
 
-export function getProviders(category: string): Promise<ServiceProvider[]> {
-  // return apiGet<ServiceProvider[]>(`/providers?category=${category}`);
-  return mockResponse(providers.filter((p) => p.category === category));
+// ---------------------------------------------------------------------------
+// Service directory (Caretakers / House Help / Agents). Live agents and
+// caretakers come from TripNest.Core and carry a userId, which unlocks the
+// real request + chat flows; the mock entries stay as directory filler and
+// have no userId. House Help has no backend concept yet, so it is mock-only.
+// ---------------------------------------------------------------------------
+
+interface AgentDto {
+  agentId: string;
+  userId: string;
+  licenseNumber: string;
+  phoneNumber: string;
+  bio: string;
+  status: number;
+  commissionRate?: number | null;
+  yearsOfExperience?: number | null;
+  joinDate: string;
+  certifications?: string | null;
+}
+
+interface CaretakerDto {
+  caretakerId: string;
+  userId: string;
+  propertyId: string;
+  status: number;
+  startDate: string;
+  endDate?: string | null;
+  monthlyCompensation?: number | null;
+  responsibilities: string;
+}
+
+export interface ServiceRequestDto {
+  serviceRequestId: string;
+  caretakerId: string;
+  requestedByUserId: string;
+  propertyId: string;
+  serviceType: string;
+  description: string;
+  status: string;
+  rating?: number | null;
+  reviewComment?: string | null;
+  createdAt: string;
+  completedAt?: string | null;
+}
+
+export interface ViewingRequestDto {
+  viewingRequestId: string;
+  agentId: string;
+  tenantId: string;
+  propertyId: string;
+  scheduledAt: string;
+  notes?: string | null;
+  status: string;
+  createdAt: string;
+}
+
+// The list DTOs don't expose the person's name yet, so live rows get
+// descriptive names until the backend adds FullName to these responses.
+function mapAgent(dto: AgentDto): ServiceProvider {
+  return {
+    id: dto.agentId,
+    userId: dto.userId,
+    name: `Verified Agent · ${dto.licenseNumber}`,
+    category: 'Agents',
+    role: dto.yearsOfExperience ? `${dto.yearsOfExperience} yrs experience` : 'Verified Agent',
+    location: 'Tarkwa, Ghana',
+    rating: 0,
+    reviews: 0,
+    verified: true,
+    rate: 0,
+    ratePeriod: 'commission',
+    skills: dto.certifications ? dto.certifications.split(',').map((s) => s.trim()) : ['Property viewings'],
+    bio: dto.bio,
+  };
+}
+
+function mapCaretaker(dto: CaretakerDto): ServiceProvider {
+  return {
+    id: dto.caretakerId,
+    userId: dto.userId,
+    name: 'Property Caretaker',
+    category: 'Caretakers',
+    role: 'Resident caretaker',
+    location: 'Tarkwa, Ghana',
+    rating: 0,
+    reviews: 0,
+    verified: true,
+    rate: dto.monthlyCompensation ?? 0,
+    ratePeriod: 'month',
+    skills: dto.responsibilities.split(',').map((s) => s.trim()).filter(Boolean),
+    bio: dto.responsibilities,
+  };
+}
+
+async function liveProviders(category: string): Promise<ServiceProvider[]> {
+  try {
+    if (category === 'Agents') {
+      const dtos = await apiGet<AgentDto[]>('/api/agents');
+      return dtos.map(mapAgent);
+    }
+    if (category === 'Caretakers') {
+      const dtos = await apiGet<CaretakerDto[]>('/api/caretakers');
+      return dtos.map(mapCaretaker);
+    }
+  } catch {
+    // API down or empty — the mock entries below keep the directory usable.
+  }
+  return [];
+}
+
+export async function getProviders(category: string): Promise<ServiceProvider[]> {
+  const live = await liveProviders(category);
+  const mocks = mockProviders.filter((p) => p.category === category);
+  return [...live, ...mocks];
+}
+
+export async function getProviderById(id: string): Promise<ServiceProvider | undefined> {
+  for (const category of ['Caretakers', 'House Help', 'Agents']) {
+    const rows = await getProviders(category);
+    const found = rows.find((p) => p.id === id);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/** Ask a caretaker / house help for a service. Live providers only. */
+export function requestCaretakerService(input: {
+  caretakerId: string;
+  serviceType: string;
+  description: string;
+  propertyId?: string;
+  scheduledFor?: string;
+}): Promise<ServiceRequestDto> {
+  return apiPost<ServiceRequestDto>('/api/caretakers/service-requests', input);
+}
+
+/** Ask an agent for a property viewing. Live providers only. */
+export function requestAgentViewing(
+  agentId: string,
+  input: { propertyId: string; scheduledAt: string; notes?: string },
+): Promise<ViewingRequestDto> {
+  return apiPost<ViewingRequestDto>(`/api/agents/${agentId}/viewing-requests`, input);
 }

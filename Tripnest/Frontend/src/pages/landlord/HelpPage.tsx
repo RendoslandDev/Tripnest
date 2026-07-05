@@ -48,7 +48,7 @@ export default function LandlordHelpPage() {
   const navigate = useNavigate();
   return (
     <div className="max-w-3xl">
-      <h1 className="mb-6 text-3xl font-bold text-ink">Help &amp; Support</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight text-ink">Help &amp; Support</h1>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <ContactCard icon={<ChatIcon size={18} />} label="Host support" value="Chat with us" onClick={() => navigate('/messages')} />
@@ -64,7 +64,7 @@ export default function LandlordHelpPage() {
         <div className="mt-5 rounded-xl bg-brand-50 p-4">
           <p className="font-semibold text-ink">Still need help?</p>
           <p className="mb-3 text-sm text-muted">Our host team replies within minutes during business hours.</p>
-          <Button size="sm" onClick={() => navigate('/messages')}>Contact host support</Button>
+          <Button variant="dark" size="sm" onClick={() => navigate('/messages')}>Contact host support</Button>
         </div>
       </Card>
     </div>

@@ -36,7 +36,7 @@ function TenantsView({ tenants }: { tenants: LandlordTenant[] }) {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-ink">Tenants</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-ink">Tenants</h1>
       <p className="mt-1 mb-6 text-sm text-muted">
         {tenants.length} active · {formatCedi(monthly)}/mo in rent
         {overdue > 0 && <span className="text-rose-600"> · {overdue} overdue</span>}

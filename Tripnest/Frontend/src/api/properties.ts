@@ -1,23 +1,47 @@
 import type { Property } from '../types';
-import { properties } from '../data/properties';
-import { mockResponse } from './client';
+import { apiDelete, apiGet, apiPost } from './client';
+import { mapProperty, type PropertyResponseDto, type WishlistItemDto } from './backend';
 
-export function getFeaturedProperties(): Promise<Property[]> {
-  // return apiGet<Property[]>('/properties/featured');
-  return mockResponse(properties.slice(0, 4));
+export async function getProperties(): Promise<Property[]> {
+  const dtos = await apiGet<PropertyResponseDto[]>('/api/properties');
+  return dtos.map(mapProperty);
 }
 
-export function getProperties(): Promise<Property[]> {
-  // return apiGet<Property[]>('/properties');
-  return mockResponse(properties);
+export async function getFeaturedProperties(): Promise<Property[]> {
+  const all = await getProperties();
+  return all.slice(0, 4);
 }
 
-export function getPropertyById(id: string): Promise<Property | undefined> {
-  // return apiGet<Property>(`/properties/${id}`);
-  return mockResponse(properties.find((p) => p.id === id));
+export async function getPropertyById(id: string): Promise<Property | undefined> {
+  try {
+    const dto = await apiGet<PropertyResponseDto>(`/api/properties/${id}`);
+    return mapProperty(dto);
+  } catch {
+    return undefined;
+  }
 }
 
-export function getSavedProperties(): Promise<Property[]> {
-  // return apiGet<Property[]>('/properties/saved');
-  return mockResponse([properties[0], properties[2], properties[5]]);
+export async function searchProperties(location: string): Promise<Property[]> {
+  const dtos = await apiGet<PropertyResponseDto[]>(
+    `/api/properties/search?location=${encodeURIComponent(location)}`,
+  );
+  return dtos.map(mapProperty);
+}
+
+/** Wishlist-backed "Saved" list: ids from /api/wishlist joined to listings. */
+export async function getSavedProperties(): Promise<Property[]> {
+  const [items, all] = await Promise.all([
+    apiGet<WishlistItemDto[]>('/api/wishlist/mine'),
+    getProperties(),
+  ]);
+  const saved = new Set(items.map((i) => i.propertyId));
+  return all.filter((p) => saved.has(p.id));
+}
+
+export function saveProperty(propertyId: string): Promise<unknown> {
+  return apiPost(`/api/wishlist/${propertyId}`);
+}
+
+export function unsaveProperty(propertyId: string): Promise<unknown> {
+  return apiDelete(`/api/wishlist/${propertyId}`);
 }

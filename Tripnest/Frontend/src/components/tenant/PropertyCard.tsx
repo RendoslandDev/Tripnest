@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { createPortal } from 'react-dom';
+import { lazy, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Property } from '../../types';
 import { formatCedi } from '../../lib/format';
 import { AmenityIcon, ShieldIcon, StarIcon } from './icons';
-import VirtualTour from './tour/VirtualTour';
+
+// The tour player (and its clip stores) loads on demand — most visitors
+// never open it, and it's the heaviest part of the marketplace bundle.
+const VirtualTour = lazy(() => import('./tour/VirtualTour'));
 
 interface PropertyCardProps {
   property: Property;
@@ -96,11 +98,12 @@ export default function PropertyCard({ property, initialSaved = false, onToggleS
         </div>
       </div>
     </Link>
-    {tourOpen &&
-      createPortal(
-        <VirtualTour propertyId={property.id} onClose={() => setTourOpen(false)} />,
-        document.body,
-      )}
+    {/* VirtualTour portals itself to document.body. */}
+    {tourOpen && (
+      <Suspense fallback={null}>
+        <VirtualTour propertyId={property.id} onClose={() => setTourOpen(false)} />
+      </Suspense>
+    )}
     </>
   );
 }

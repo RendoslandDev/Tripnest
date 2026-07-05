@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { currentUser } from '../../data/user';
-import { useSession, signIn } from '../../store/authStore';
+import { useSession, updateSession } from '../../store/authStore';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Avatar from '../../components/ui/Avatar';
+import Badge from '../../components/ui/Badge';
 import {
   ShieldIcon, CheckIcon, StarIcon, MapPinIcon, MailIcon, PhoneIcon, BadgeIcon, ClockIcon,
 } from '../../components/tenant/icons';
@@ -24,20 +25,20 @@ function Field({ label, value, onChange, type = 'text' }: {
   );
 }
 
-function Confirmed({ label }: { label: string }) {
-  return (
-    <li className="flex items-center gap-2 text-sm text-ink">
-      <CheckIcon size={15} className="text-brand" /> {label}
-    </li>
-  );
-}
-
 function InfoItem({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <div className="flex items-center gap-3 py-2">
       <span className="text-muted">{icon}</span>
       <span className="text-sm text-ink">{label}</span>
     </div>
+  );
+}
+
+function VerifiedChip({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand">
+      <CheckIcon size={14} /> {label}
+    </span>
   );
 }
 
@@ -72,124 +73,129 @@ export default function ProfilePage() {
 
   const save = () => {
     if (session) {
-      signIn({ ...session, name: form.name.trim() || session.name, email: form.email.trim() || session.email });
+      updateSession({ name: form.name.trim() || session.name, email: form.email.trim() || session.email });
     }
     setEditing(false);
     setSaved(true);
   };
 
   return (
-    <div>
-      <h1 className="mb-6 text-3xl font-bold text-ink">Profile</h1>
+    <div className="max-w-4xl">
+      {/* Cover + identity header */}
+      <div>
+        <div className="relative h-40 overflow-hidden rounded-xl bg-gradient-to-r from-brand to-emerald-700 sm:h-48">
+          <div className="absolute -right-10 -top-16 h-56 w-56 rounded-full bg-white/10" />
+          <div className="absolute -bottom-20 right-24 h-48 w-48 rounded-full bg-white/5" />
+          <div className="absolute -left-12 -bottom-24 h-56 w-56 rounded-full bg-white/5" />
+        </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[340px_1fr]">
-        {/* Identity card */}
-        <div className="lg:sticky lg:top-6 lg:self-start">
-          <Card className="p-6 text-center shadow-sm">
-            <div className="relative mx-auto w-fit">
-              <Avatar name={form.name} size={112} className="text-3xl" />
-              <span className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-brand text-white">
-                <ShieldIcon size={14} />
-              </span>
-            </div>
-            <p className="mt-3 text-xl font-bold text-ink">{firstName}</p>
-            <p className="text-sm text-muted">{roleLabel} · TripNest member</p>
+        <div className="px-4 sm:px-8">
+          <div className="relative -mt-14 w-fit">
+            <Avatar name={form.name} size={112} className="text-3xl ring-4 ring-white" />
+            <span className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-brand text-white">
+              <ShieldIcon size={15} />
+            </span>
+          </div>
 
-            <div className="mt-5 grid grid-cols-2 divide-x divide-gray-100 border-y border-gray-100 py-4">
-              <div>
-                <p className="text-lg font-bold text-ink">12</p>
-                <p className="text-xs text-muted">Reviews</p>
+          <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-bold text-ink sm:text-3xl">{form.name}</h1>
+                <Badge tone="green">✓ Verified</Badge>
               </div>
-              <div>
-                <p className="flex items-center justify-center gap-1 text-lg font-bold text-ink">
-                  <StarIcon size={14} className="text-amber-400" /> 4.9
-                </p>
-                <p className="text-xs text-muted">Rating</p>
+              <p className="mt-0.5 text-muted">{roleLabel} · {form.location}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink">
+                <span className="flex items-center gap-1 font-semibold">
+                  <StarIcon size={15} className="text-amber-400" /> 4.9 rating
+                </span>
+                <span className="text-muted">12 reviews</span>
+                <span className="flex items-center gap-1 text-muted">
+                  <ClockIcon size={14} /> Joined 2025
+                </span>
               </div>
+              {saved && <p className="mt-2 text-sm font-medium text-brand">Profile updated</p>}
             </div>
-
-            <div className="mt-4 text-left">
-              <p className="mb-2 text-sm font-semibold text-ink">{firstName}'s confirmed information</p>
-              <ul className="space-y-1.5">
-                <Confirmed label="Identity" />
-                <Confirmed label="Email address" />
-                <Confirmed label="Phone number" />
-              </ul>
-            </div>
-
             {!editing && (
-              <Button className="mt-5 w-full" onClick={() => { setEditing(true); setSaved(false); }}>
+              <Button onClick={() => { setEditing(true); setSaved(false); }}>
                 Edit profile
               </Button>
             )}
-          </Card>
+          </div>
         </div>
+      </div>
 
-        {/* About */}
-        <div className="min-w-0">
-          {editing ? (
+      <div className="mt-8 space-y-6">
+        {editing ? (
+          <Card className="p-6">
+            <h2 className="mb-4 text-xl font-bold text-ink">Edit your profile</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Full name" value={form.name} onChange={set('name')} />
+              <Field label="Email" type="email" value={form.email} onChange={set('email')} />
+              <Field label="Phone" value={form.phone} onChange={set('phone')} />
+              <Field label="Location" value={form.location} onChange={set('location')} />
+              <Field label="Work" value={form.work} onChange={set('work')} />
+              <Field label="Languages" value={form.languages} onChange={set('languages')} />
+            </div>
+            <label className="mt-4 block">
+              <span className="mb-1.5 block text-sm font-medium text-ink">About you</span>
+              <textarea
+                value={form.bio}
+                onChange={(e) => set('bio')(e.target.value)}
+                rows={4}
+                className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink outline-none focus:border-brand"
+              />
+            </label>
+            <div className="mt-5 flex gap-2">
+              <Button onClick={save}>Save changes</Button>
+              <Button variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
+            </div>
+          </Card>
+        ) : (
+          <>
             <Card className="p-6">
-              <h2 className="mb-4 text-xl font-bold text-ink">Edit your profile</h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="Full name" value={form.name} onChange={set('name')} />
-                <Field label="Email" type="email" value={form.email} onChange={set('email')} />
-                <Field label="Phone" value={form.phone} onChange={set('phone')} />
-                <Field label="Location" value={form.location} onChange={set('location')} />
-                <Field label="Work" value={form.work} onChange={set('work')} />
-                <Field label="Languages" value={form.languages} onChange={set('languages')} />
-              </div>
-              <label className="mt-4 block">
-                <span className="mb-1.5 block text-sm font-medium text-ink">About you</span>
-                <textarea
-                  value={form.bio}
-                  onChange={(e) => set('bio')(e.target.value)}
-                  rows={4}
-                  className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink outline-none focus:border-brand"
-                />
-              </label>
-              <div className="mt-5 flex gap-2">
-                <Button onClick={save}>Save changes</Button>
-                <Button variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
+              <h2 className="text-xl font-bold text-ink">About {firstName}</h2>
+              <p className="mt-3 text-ink">{form.bio}</p>
+              <div className="mt-4 grid grid-cols-1 gap-x-8 border-t border-gray-100 pt-3 sm:grid-cols-2">
+                <InfoItem icon={<MapPinIcon size={18} />} label={`Lives in ${form.location}`} />
+                <InfoItem icon={<BadgeIcon size={18} />} label={`Speaks ${form.languages}`} />
+                <InfoItem icon={<ShieldIcon size={18} />} label={form.work} />
+                <InfoItem icon={<MailIcon size={18} />} label={form.email} />
+                <InfoItem icon={<PhoneIcon size={18} />} label={form.phone} />
               </div>
             </Card>
-          ) : (
-            <div className="space-y-8">
-              <section>
-                <h2 className="text-2xl font-bold text-ink">About {firstName}</h2>
-                {saved && <p className="mt-1 text-sm font-medium text-brand">Profile updated</p>}
-                <p className="mt-3 text-ink">{form.bio}</p>
-                <div className="mt-4 grid grid-cols-1 gap-x-8 sm:grid-cols-2">
-                  <InfoItem icon={<MapPinIcon size={18} />} label={`Lives in ${form.location}`} />
-                  <InfoItem icon={<BadgeIcon size={18} />} label={`Speaks ${form.languages}`} />
-                  <InfoItem icon={<ClockIcon size={18} />} label="Joined TripNest in 2025" />
-                  <InfoItem icon={<ShieldIcon size={18} />} label={form.work} />
-                  <InfoItem icon={<MailIcon size={18} />} label={form.email} />
-                  <InfoItem icon={<PhoneIcon size={18} />} label={form.phone} />
-                </div>
-              </section>
 
-              <section className="border-t border-gray-100 pt-6">
-                <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">
-                  <StarIcon size={18} className="text-amber-400" /> What hosts say about {firstName}
-                </h3>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {REVIEWS.map((r) => (
-                    <Card key={r.id} className="p-5">
-                      <p className="text-sm text-ink">"{r.text}"</p>
-                      <div className="mt-4 flex items-center gap-3">
-                        <Avatar name={r.name} size={40} />
-                        <div>
-                          <p className="text-sm font-semibold text-ink">{r.name}</p>
-                          <p className="text-xs text-muted">{r.role} · {r.date}</p>
-                        </div>
+            <Card className="p-6">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
+                <ShieldIcon size={18} className="text-brand" /> {firstName}'s confirmed information
+              </h2>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <VerifiedChip label="Identity" />
+                <VerifiedChip label="Email address" />
+                <VerifiedChip label="Phone number" />
+              </div>
+            </Card>
+
+            <section>
+              <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">
+                <StarIcon size={18} className="text-amber-400" /> What hosts say about {firstName}
+              </h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {REVIEWS.map((r) => (
+                  <Card key={r.id} className="p-5">
+                    <p className="text-sm text-ink">"{r.text}"</p>
+                    <div className="mt-4 flex items-center gap-3">
+                      <Avatar name={r.name} size={40} />
+                      <div>
+                        <p className="text-sm font-semibold text-ink">{r.name}</p>
+                        <p className="text-xs text-muted">{r.role} · {r.date}</p>
                       </div>
-                    </Card>
-                  ))}
-                </div>
-              </section>
-            </div>
-          )}
-        </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
       </div>
     </div>
   );

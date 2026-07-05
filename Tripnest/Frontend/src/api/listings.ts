@@ -1,11 +1,69 @@
 import type { Listing } from '../types';
-import { listings as mockListings } from '../data/listings';
-import { mockResponse } from './client';
+import { apiGet, apiPost, apiPut, apiUpload } from './client';
+import { mapListing, type PropertyResponseDto } from './backend';
 
-// Service layer for host listings. Today these resolve local mock data; to go
-// live, swap each body for the commented apiGet call — callers don't change.
+export async function getListings(): Promise<Listing[]> {
+  const dtos = await apiGet<PropertyResponseDto[]>('/api/properties/user/my-properties');
+  return dtos.map(mapListing);
+}
 
-export function getListings(): Promise<Listing[]> {
-  // return apiGet<Listing[]>('/listings');
-  return mockResponse(mockListings);
+export interface NewListingInput {
+  title: string;
+  description: string;
+  location: string;
+  bedrooms: number;
+  bathrooms: number;
+  monthlyRent: number;
+  dailyRate?: number;
+  propertyType: string;
+  stayType: number; // StayType: 0 ShortTerm, 1 LongTerm, 2 Student
+  cancellationPolicy: number; // CancellationPolicy: 0 Flexible, 1 Moderate, 2 Strict
+  amenities?: string;
+}
+
+// Default coordinates (Tarkwa, Ghana) until the form grows a map picker —
+// the backend requires lat/lng but nothing user-facing consumes them yet.
+const DEFAULT_COORDS = { latitude: 5.3018, longitude: -1.9931 };
+
+export async function createListing(input: NewListingInput): Promise<Listing> {
+  const dto = await apiPost<PropertyResponseDto>('/api/properties', {
+    ...DEFAULT_COORDS,
+    ...input,
+    dailyRate: input.dailyRate || null,
+    amenities: input.amenities || null,
+  });
+  return mapListing(dto);
+}
+
+/** Full property record for pre-filling the edit form. */
+export function getListingProperty(propertyId: string): Promise<PropertyResponseDto> {
+  return apiGet<PropertyResponseDto>(`/api/properties/${propertyId}`);
+}
+
+/**
+ * Update a listing. The backend PUT replaces every field, so callers must
+ * send the complete form (pre-filled from getListingProperty) plus the
+ * original coordinates.
+ */
+export async function updateListing(
+  propertyId: string,
+  input: NewListingInput & { latitude: number; longitude: number },
+): Promise<Listing> {
+  const dto = await apiPut<PropertyResponseDto>(`/api/properties/${propertyId}`, {
+    ...input,
+    dailyRate: input.dailyRate || null,
+    amenities: input.amenities || null,
+  });
+  return mapListing(dto);
+}
+
+/**
+ * Upload listing photos (owner only). Returns the stored photo paths.
+ * These photos also become the source material for the property's
+ * generated video walkthrough.
+ */
+export function uploadListingPhotos(propertyId: string, files: File[]): Promise<string[]> {
+  const form = new FormData();
+  for (const file of files) form.append('files', file, file.name);
+  return apiUpload<string[]>(`/api/properties/${propertyId}/photos`, form);
 }

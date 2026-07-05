@@ -1,36 +1,20 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import type { PaymentChannel, Property } from '../../types';
+import type { Property } from '../../types';
 import { getPropertyById } from '../../api/properties';
-import { initiatePayment, verifyPayment, attachBooking, type MomoNetwork } from '../../api/payments';
+import { createBooking } from '../../api/bookings';
+import { initiateEscrow, isSimulatedCheckout, savePendingCheckout } from '../../api/escrow';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import { formatCedi, formatDateShort } from '../../lib/format';
-import { createBooking, quotePrice } from '../../store/bookingStore';
-import { currentUser } from '../../data/user';
+import { quotePrice } from '../../store/bookingStore';
 import type { BookingSelection } from '../../components/tenant/BookingWidget';
-import { CalendarIcon, MapPinIcon, ShieldIcon, UserIcon } from '../../components/tenant/icons';
+import { CalendarIcon, CardIcon, MapPinIcon, ShieldIcon, UserIcon } from '../../components/tenant/icons';
 
-type PayPhase = 'idle' | 'initiating' | 'awaiting' | 'verifying';
-
-const PAYMENT_METHODS = [
-  { id: 'momo', label: 'Mobile Money', hint: 'MTN, Telecel, AirtelTigo' },
-  { id: 'card', label: 'Debit / Credit card', hint: 'Visa or Mastercard' },
-] as const;
-
-const MOMO_NETWORKS: { id: MomoNetwork; label: string }[] = [
-  { id: 'mtn', label: 'MTN MoMo' },
-  { id: 'telecel', label: 'Telecel Cash' },
-  { id: 'airteltigo', label: 'AirtelTigo Money' },
-];
-
-/** Ghana MoMo numbers are 10 digits (e.g. 024XXXXXXX). */
-function isValidMomo(num: string): boolean {
-  return /^0\d{9}$/.test(num.replace(/\s/g, ''));
-}
+type PayPhase = 'idle' | 'booking' | 'initiating';
 
 function defaultSelection(property: Property): BookingSelection {
   const today = new Date();
@@ -49,72 +33,66 @@ function Review({ property }: { property: Property }) {
   const selection = (location.state as BookingSelection | null) ?? defaultSelection(property);
   const quote = quotePrice(property, selection.checkInISO, selection.checkOutISO);
 
-  const [method, setMethod] = useState<PaymentChannel>('momo');
-  const [momoNetwork, setMomoNetwork] = useState<MomoNetwork>('mtn');
-  const [momoNumber, setMomoNumber] = useState('');
   const [phase, setPhase] = useState<PayPhase>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [confirmedId, setConfirmedId] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState<{ bookingId: string; amount: number } | null>(null);
 
   const submitting = phase !== 'idle';
-  const momoReady = method !== 'momo' || isValidMomo(momoNumber);
-  const canPay = quote.nights > 0 && momoReady && !submitting;
+  const canPay = quote.nights > 0 && !submitting;
 
-  // Charge first; only write the booking once the payment verifies as successful.
+  // Book first (the server checks availability and derives the price), then
+  // open an escrow for it — Paystack's hosted page takes the actual payment.
   const confirm = async () => {
     setError(null);
-    if (method === 'momo' && !isValidMomo(momoNumber)) {
-      setError('Enter a valid 10-digit Mobile Money number.');
-      return;
-    }
     try {
+      setPhase('booking');
+      const booking = await createBooking({
+        propertyId: property.id,
+        checkInDate: selection.checkInISO,
+        checkOutDate: selection.checkOutISO,
+      });
+
       setPhase('initiating');
-      const intent = await initiatePayment({
-        amount: quote.total,
-        channel: method,
-        email: currentUser.email,
-        ...(method === 'momo' && { momoNumber, momoNetwork }),
-      });
+      const escrow = await initiateEscrow(booking.id);
 
-      // MoMo: the payer approves a prompt on their phone. Card: provider auth.
-      setPhase(method === 'momo' ? 'awaiting' : 'verifying');
-      const txn = await verifyPayment(intent.reference);
-      if (txn.status !== 'success') throw new Error('Payment was not completed.');
+      if (escrow.checkoutUrl && !isSimulatedCheckout(escrow.checkoutUrl)) {
+        savePendingCheckout({
+          escrowId: escrow.escrowId,
+          bookingId: booking.id,
+          propertyTitle: property.title,
+        });
+        window.location.assign(escrow.checkoutUrl);
+        return; // navigating away — Paystack redirects back to /payment/callback
+      }
 
-      const booking = createBooking({
-        property,
-        checkInISO: selection.checkInISO,
-        checkOutISO: selection.checkOutISO,
-        guests: selection.guests,
-      });
-      attachBooking(intent.reference, booking.id);
-      setConfirmedId(booking.id);
+      // Dev environment without Paystack keys: the escrow exists but no real
+      // charge happens. Show the booking as created with payment pending.
+      setConfirmed({ bookingId: booking.id, amount: escrow.amount });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Payment failed. Please try again.');
+      setError(e instanceof Error ? e.message : 'Booking failed. Please try again.');
     } finally {
       setPhase('idle');
     }
   };
 
   const payLabel =
-    phase === 'initiating'
-      ? 'Starting payment…'
-      : phase === 'awaiting'
-        ? 'Approve on your phone…'
-        : phase === 'verifying'
-          ? 'Verifying payment…'
-          : `Confirm & pay ${formatCedi(quote.total)}`;
+    phase === 'booking'
+      ? 'Reserving your dates…'
+      : phase === 'initiating'
+        ? 'Preparing secure payment…'
+        : `Confirm & pay ${formatCedi(quote.total)}`;
 
-  if (confirmedId) {
+  if (confirmed) {
     return (
       <Card className="mx-auto max-w-md p-8 text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand">
           <ShieldIcon size={26} />
         </div>
-        <h1 className="text-2xl font-bold text-ink">Booking confirmed</h1>
+        <h1 className="text-2xl font-bold text-ink">Booking reserved</h1>
         <p className="mt-2 text-muted">
-          Your reservation at <span className="font-semibold text-ink">{property.title}</span> is
-          booked. Reference <span className="font-semibold text-ink">{confirmedId}</span>.
+          Your reservation at <span className="font-semibold text-ink">{property.title}</span> is in.
+          Reference <span className="font-semibold text-ink">{confirmed.bookingId.slice(0, 8).toUpperCase()}</span>
+          {' '}· {formatCedi(confirmed.amount)} held pending payment.
         </p>
         <div className="mt-6 flex flex-col gap-2">
           <Button onClick={() => navigate('/bookings')}>View my bookings</Button>
@@ -153,70 +131,20 @@ function Review({ property }: { property: Property }) {
           </Card>
 
           <Card className="p-5">
-            <h2 className="mb-3 text-lg font-bold text-ink">Pay with</h2>
-            <div className="space-y-2">
-              {PAYMENT_METHODS.map((m) => (
-                <label
-                  key={m.id}
-                  className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${
-                    method === m.id ? 'border-brand bg-brand-50' : 'border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="payment"
-                    value={m.id}
-                    checked={method === m.id}
-                    onChange={() => setMethod(m.id as PaymentChannel)}
-                    className="h-4 w-4 accent-brand"
-                  />
-                  <span>
-                    <span className="block text-sm font-semibold text-ink">{m.label}</span>
-                    <span className="block text-xs text-muted">{m.hint}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-
-            {method === 'momo' && (
-              <div className="mt-4 space-y-3 rounded-lg border border-gray-100 bg-gray-50 p-4">
-                <div>
-                  <span className="mb-1.5 block text-sm font-medium text-ink">Network</span>
-                  <div className="flex flex-wrap gap-2">
-                    {MOMO_NETWORKS.map((n) => (
-                      <button
-                        key={n.id}
-                        type="button"
-                        onClick={() => setMomoNetwork(n.id)}
-                        className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                          momoNetwork === n.id
-                            ? 'border-brand bg-brand-50 text-brand'
-                            : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-100'
-                        }`}
-                      >
-                        {n.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-medium text-ink">Mobile Money number</span>
-                  <input
-                    value={momoNumber}
-                    onChange={(e) => setMomoNumber(e.target.value)}
-                    inputMode="tel"
-                    placeholder="024 123 4567"
-                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-brand"
-                  />
-                  {momoNumber !== '' && !isValidMomo(momoNumber) && (
-                    <span className="mt-1 block text-xs text-rose-600">Enter a valid 10-digit number.</span>
-                  )}
-                </label>
-                <p className="text-xs text-muted">
-                  You'll get a prompt on this number to approve the payment.
+            <h2 className="mb-3 text-lg font-bold text-ink">Pay with Paystack</h2>
+            <div className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 p-4">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand">
+                <CardIcon size={16} />
+              </span>
+              <div className="text-sm text-ink">
+                <p className="font-semibold">Secure hosted checkout</p>
+                <p className="mt-1 text-muted">
+                  You'll be redirected to Paystack to pay with Mobile Money (MTN, Telecel,
+                  AirtelTigo) or a Visa/Mastercard, then brought back here. Your money is held in
+                  escrow until your stay is confirmed.
                 </p>
               </div>
-            )}
+            </div>
           </Card>
         </div>
 
@@ -252,6 +180,9 @@ function Review({ property }: { property: Property }) {
                 <span>Total</span>
                 <span>{formatCedi(quote.total)}</span>
               </div>
+              <p className="pt-1 text-xs text-muted">
+                Final amount is confirmed by TripNest when your dates are reserved.
+              </p>
             </div>
 
             <Button className="mt-4 w-full" onClick={confirm} disabled={!canPay}>
@@ -263,7 +194,7 @@ function Review({ property }: { property: Property }) {
               </p>
             )}
             <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted">
-              <ShieldIcon size={13} className="text-brand" /> You won't be charged in this demo
+              <ShieldIcon size={13} className="text-brand" /> Escrow-protected via Paystack
             </p>
           </Card>
         </aside>

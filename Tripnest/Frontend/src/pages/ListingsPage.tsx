@@ -2,6 +2,9 @@ import { useState } from 'react';
 import type { Listing, ListingStatus } from '../types';
 import { getListings } from '../api/listings';
 import { useAsync } from '../hooks/useAsync';
+import AddListingModal from '../components/landlord/AddListingModal';
+import EditListingModal from '../components/landlord/EditListingModal';
+import WalkthroughManagerModal from '../components/landlord/WalkthroughManagerModal';
 import AsyncBoundary from '../components/AsyncBoundary';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -22,19 +25,12 @@ const STATUS_LABEL: Record<ListingStatus, string> = {
   snoozed: 'Snoozed',
 };
 
-function ListingCard({ listing, onRename, onToggleStatus }: {
+function ListingCard({ listing, onUpdated }: {
   listing: Listing;
-  onRename: (id: string, title: string) => void;
-  onToggleStatus: (id: string) => void;
+  onUpdated: (listing: Listing) => void;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [title, setTitle] = useState(listing.title);
-
-  const saveTitle = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (title.trim()) onRename(listing.id, title.trim());
-    setEditing(false);
-  };
+  const [editOpen, setEditOpen] = useState(false);
+  const [managerOpen, setManagerOpen] = useState(false);
 
   return (
     <Card className="overflow-hidden">
@@ -42,19 +38,7 @@ function ListingCard({ listing, onRename, onToggleStatus }: {
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            {editing ? (
-              <form onSubmit={saveTitle} className="flex gap-2">
-                <input
-                  autoFocus
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="min-w-0 flex-1 rounded-lg border border-gray-200 px-2 py-1 text-sm outline-none focus:border-brand"
-                />
-                <Button type="submit" size="sm">Save</Button>
-              </form>
-            ) : (
-              <p className="truncate font-semibold text-ink">{listing.title}</p>
-            )}
+            <p className="truncate font-semibold text-ink">{listing.title}</p>
             <p className="text-sm text-muted">{listing.location}</p>
           </div>
           <Badge tone={STATUS_TONE[listing.status]}>{STATUS_LABEL[listing.status]}</Badge>
@@ -83,92 +67,48 @@ function ListingCard({ listing, onRename, onToggleStatus }: {
         <p className="mt-2 text-xs text-muted">{listing.occupancyRate}% occupancy</p>
 
         <div className="mt-4 flex gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setEditing((v) => !v)}>
-            {editing ? 'Cancel' : 'Edit'}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => onToggleStatus(listing.id)}>
-            {listing.status === 'published' ? 'Unlist' : 'Publish'}
-          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>Edit</Button>
+          <Button variant="ghost" size="sm" onClick={() => setManagerOpen(true)}>Videos</Button>
         </div>
+        {listing.status !== 'published' && (
+          <p className="mt-2 text-xs text-muted">
+            Goes live once TripNest verifies the listing.
+          </p>
+        )}
       </div>
+      {editOpen && (
+        <EditListingModal
+          listingId={listing.id}
+          onClose={() => setEditOpen(false)}
+          onUpdated={onUpdated}
+        />
+      )}
+      {managerOpen && (
+        <WalkthroughManagerModal
+          listingId={listing.id}
+          listingTitle={listing.title}
+          onClose={() => setManagerOpen(false)}
+        />
+      )}
     </Card>
-  );
-}
-
-function AddListingForm({ onAdd }: { onAdd: (title: string, location: string, rate: number) => void }) {
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [location, setLocation] = useState('');
-  const [rate, setRate] = useState('');
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || !location.trim()) return;
-    onAdd(title.trim(), location.trim(), Number(rate) || 0);
-    setTitle('');
-    setLocation('');
-    setRate('');
-    setOpen(false);
-  };
-
-  if (!open) return <Button onClick={() => setOpen(true)}>Add listing</Button>;
-
-  return (
-    <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
-      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title"
-        className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand" />
-      <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location"
-        className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand" />
-      <input value={rate} onChange={(e) => setRate(e.target.value)} inputMode="numeric" placeholder="Rate"
-        className="w-24 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand" />
-      <Button type="submit" size="sm">Save</Button>
-      <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
-    </form>
   );
 }
 
 function ListingsView({ initial }: { initial: Listing[] }) {
   const [listings, setListings] = useState(initial);
 
-  const addListing = (title: string, location: string, rate: number) => {
-    const listing: Listing = {
-      id: `draft-${Date.now()}`,
-      title,
-      location,
-      type: 'Apartment',
-      status: 'draft',
-      nightlyRate: rate,
-      beds: 1,
-      baths: 1,
-      occupancyRate: 0,
-      rating: 0,
-      reviews: 0,
-      coverColor: '#e6f4ea',
-    };
-    setListings((ls) => [listing, ...ls]);
-  };
-
-  const rename = (id: string, title: string) =>
-    setListings((ls) => ls.map((l) => (l.id === id ? { ...l, title } : l)));
-
-  const toggleStatus = (id: string) =>
-    setListings((ls) =>
-      ls.map((l) =>
-        l.id === id
-          ? { ...l, status: l.status === 'published' ? 'unlisted' : 'published' }
-          : l,
-      ),
-    );
+  const replace = (updated: Listing) =>
+    setListings((ls) => ls.map((l) => (l.id === updated.id ? updated : l)));
 
   return (
     <>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-4xl font-bold text-ink">Listings</h1>
-        <AddListingForm onAdd={addListing} />
+        <AddListingModal onCreated={(l) => setListings((ls) => [l, ...ls])} />
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {listings.map((l) => (
-          <ListingCard key={l.id} listing={l} onRename={rename} onToggleStatus={toggleStatus} />
+          <ListingCard key={l.id} listing={l} onUpdated={replace} />
         ))}
       </div>
     </>

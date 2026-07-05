@@ -61,12 +61,12 @@ function InquiryCard({ inquiry, onReply, onArchive }: {
                 placeholder="Write a reply…"
                 className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand"
               />
-              <Button type="submit" size="sm">Send</Button>
+              <Button variant="dark" type="submit" size="sm">Send</Button>
             </form>
           ) : (
             inquiry.status !== 'archived' && (
               <div className="mt-3 flex gap-2">
-                <Button size="sm" onClick={() => setOpen(true)}>Reply</Button>
+                <Button variant="dark" size="sm" onClick={() => setOpen(true)}>Reply</Button>
                 <Button size="sm" variant="ghost" onClick={() => onArchive(inquiry.id)}>Archive</Button>
               </div>
             )
@@ -91,7 +91,7 @@ function InquiriesView({ initial }: { initial: Inquiry[] }) {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-ink">Inquiries</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-ink">Inquiries</h1>
       <p className="mt-1 mb-6 text-sm text-muted">{newCount} new message{newCount === 1 ? '' : 's'} awaiting your reply.</p>
 
       <div className="mb-6 flex flex-wrap gap-2">

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CalendarMonth } from '../types';
+import type { CalendarMonth, Listing } from '../types';
 import { getCalendarMonth } from '../api/calendar';
+import { getListings } from '../api/listings';
 import { useAsync } from '../hooks/useAsync';
 import AsyncBoundary from '../components/AsyncBoundary';
 import Button from '../components/ui/Button';
@@ -117,7 +118,7 @@ function CalendarGrid({ month }: { month: CalendarMonth }) {
                   <>
                     <div className="flex items-start justify-between px-3 pt-2">
                       <span className={`font-semibold ${priceColor(day, month)}`}>
-                        ${month.prices[day]}
+                        ₵{month.prices[day]}
                       </span>
                       <span className="text-sm text-muted">{day}</span>
                     </div>
@@ -161,8 +162,75 @@ function CalendarGrid({ month }: { month: CalendarMonth }) {
   );
 }
 
+function CalendarView({ listings }: { listings: Listing[] }) {
+  const [propertyId, setPropertyId] = useState(listings[0].id);
+  const now = new Date();
+  const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() });
+  const listing = listings.find((l) => l.id === propertyId) ?? listings[0];
+
+  const state = useAsync(
+    () => getCalendarMonth(listing, cursor.year, cursor.month),
+    [listing.id, cursor.year, cursor.month],
+  );
+
+  const shiftMonth = (delta: number) =>
+    setCursor(({ year, month }) => {
+      const d = new Date(year, month + delta, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    });
+
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <select
+            value={listing.id}
+            onChange={(e) => setPropertyId(e.target.value)}
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-ink outline-none focus:border-brand"
+          >
+            {listings.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.title}
+              </option>
+            ))}
+          </select>
+          <Button variant="ghost" size="sm" onClick={() => shiftMonth(-1)} aria-label="Previous month">
+            ←
+          </Button>
+          <h2 className="w-28 text-center text-xl font-bold text-ink">{MONTHS[cursor.month]} {cursor.year}</h2>
+          <Button variant="ghost" size="sm" onClick={() => shiftMonth(1)} aria-label="Next month">
+            →
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-5 text-sm text-muted">
+          <span className="flex items-center gap-1.5">
+            <Moon /> Minimum nights
+          </span>
+          <span className="flex items-center gap-1.5">
+            <LegendDot className={OWNER_HATCH} /> Blocked / owner use
+          </span>
+          <span className="flex items-center gap-1.5">
+            <LegendDot className={MAINT_HATCH} /> Maintenance
+          </span>
+        </div>
+      </div>
+      <AsyncBoundary
+        state={state}
+        loadingMessage="Loading calendar…"
+        errorMessage="Failed to load calendar."
+      >
+        {(data) => (
+          <div className="overflow-x-auto">
+            <CalendarGrid month={data} />
+          </div>
+        )}
+      </AsyncBoundary>
+    </>
+  );
+}
+
 export default function CalendarPage() {
-  const state = useAsync(() => getCalendarMonth(), []);
+  const listingsState = useAsync(getListings, []);
   const [blocking, setBlocking] = useState(false);
 
   useEffect(() => {
@@ -185,31 +253,17 @@ export default function CalendarPage() {
       )}
 
       <AsyncBoundary
-        state={state}
-        loadingMessage="Loading calendar…"
-        errorMessage="Failed to load calendar."
+        state={listingsState}
+        loadingMessage="Loading your listings…"
+        errorMessage="Failed to load your listings."
       >
-        {(data) => (
-          <>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-xl font-bold text-ink">{data.label}</h2>
-              <div className="flex flex-wrap items-center gap-5 text-sm text-muted">
-                <span className="flex items-center gap-1.5">
-                  <Moon /> Minimum nights
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <LegendDot className={OWNER_HATCH} /> Owner booking
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <LegendDot className={MAINT_HATCH} /> Maintenance
-                </span>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <CalendarGrid month={data} />
-            </div>
-          </>
-        )}
+        {(listings) =>
+          listings.length > 0 ? (
+            <CalendarView listings={listings} />
+          ) : (
+            <p className="text-muted">Publish a listing to manage its calendar.</p>
+          )
+        }
       </AsyncBoundary>
     </div>
   );

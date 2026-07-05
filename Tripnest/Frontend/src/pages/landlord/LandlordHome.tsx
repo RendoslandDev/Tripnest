@@ -9,7 +9,7 @@ import Button from '../../components/ui/Button';
 import Badge, { type BadgeTone } from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import { formatCedi } from '../../lib/format';
-import { currentUser } from '../../data/user';
+import { useSession } from '../../store/authStore';
 import {
   KeyIcon, CardIcon, CalendarIcon, StarIcon, PlusIcon, MapPinIcon, ChevronRightIcon,
 } from '../../components/tenant/icons';
@@ -29,12 +29,10 @@ const INQUIRIES = [
 
 function Stat({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
   return (
-    <Card className="p-4">
-      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand">
-        {icon}
-      </span>
-      <p className="mt-3 text-2xl font-bold text-ink">{value}</p>
-      <p className="text-xs text-muted">{label}</p>
+    <Card className="border-gray-100 p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <span className="flex items-center gap-2 text-gray-400">{icon}</span>
+      <p className="mt-3 text-2xl font-bold tracking-tight text-ink">{value}</p>
+      <p className="mt-0.5 text-xs text-muted">{label}</p>
     </Card>
   );
 }
@@ -69,7 +67,8 @@ function ListingCard({ listing }: { listing: Listing }) {
 }
 
 function Home({ listings, overview }: { listings: Listing[]; overview: OverviewSummary }) {
-  const firstName = currentUser.name.split(' ')[0];
+  const session = useSession();
+  const firstName = (session?.name ?? 'there').split(' ')[0];
   const published = listings.filter((l) => l.status === 'published').length;
   const avgOccupancy = listings.length
     ? Math.round(listings.reduce((sum, l) => sum + l.occupancyRate, 0) / listings.length)
@@ -79,10 +78,10 @@ function Home({ listings, overview }: { listings: Listing[]; overview: OverviewS
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-ink">Welcome back, {firstName}</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-ink">Welcome back, {firstName}</h1>
           <p className="mt-1 text-muted">Here's how your properties are performing.</p>
         </div>
-        <Button className="gap-2">
+        <Button variant="dark" className="gap-2 rounded-xl">
           <PlusIcon size={16} /> List a property
         </Button>
       </div>
@@ -146,12 +145,12 @@ function Home({ listings, overview }: { listings: Listing[]; overview: OverviewS
             </Link>
           </Card>
 
-          <Card className="bg-brand p-5 text-white">
+          <Card className="border-ink bg-ink p-5 text-white">
             <h3 className="font-bold">Grow your portfolio</h3>
-            <p className="mt-1 text-sm text-white/80">
+            <p className="mt-1 text-sm text-white/70">
               Verified listings get 3× more inquiries. Add your next property today.
             </p>
-            <Button className="mt-3 bg-white text-brand hover:bg-white/90" size="sm">
+            <Button className="mt-3 rounded-xl bg-white text-ink hover:bg-white/90" size="sm">
               List a property
             </Button>
           </Card>

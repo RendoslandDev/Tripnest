@@ -104,6 +104,8 @@ export interface Property {
   agent: PropertyAgent;
 //    Apartment position, used for maps, distance and routing.
   coords: LatLng;
+//    Uploaded listing photo URLs; also feed the walkthrough generation.
+  photos?: string[];
 }
 
 export interface TenantDashboard {
@@ -133,7 +135,8 @@ export interface TenantDashboard {
 }
 
 export interface Conversation {
-  id: number;
+  // number in mock data, GUID string from the live API
+  id: string | number;
   name: string;
   role: string;
   lastMessage: string;
@@ -142,7 +145,7 @@ export interface Conversation {
 }
 
 export interface ChatMessage {
-  id: number;
+  id: string | number;
   fromMe: boolean;
   text: string;
   time: string;
@@ -151,7 +154,7 @@ export interface ChatMessage {
 export type NotificationType = 'booking' | 'payment' | 'maintenance' | 'message' | 'safety';
 
 export interface Notification {
-  id: number;
+  id: string | number;
   type: NotificationType;
   title: string;
   body: string;
@@ -171,12 +174,15 @@ export interface ServiceProvider {
   rate: number;
   ratePeriod: string;
   skills: string[];
+  /** Backend user id — present on live providers; enables requests & chat. */
+  userId?: string;
+  bio?: string;
 }
 
 export type MaintenanceStatus = 'pending' | 'in-progress' | 'resolved';
 
 export interface MaintenanceTicket {
-  id: number;
+  id: string | number;
   title: string;
   property: string;
   category: string;
@@ -472,8 +478,42 @@ export interface TourHotspot {
   detail: string;
 }
 
-//  One stop on the walkthrough — rendered as a cinematic scene placeholder
-//    until a real photo/video (`media`) is supplied per room.
+export type TourVideoStatus = 'pending' | 'ready' | 'failed';
+
+//  A walkthrough video generated from listing photos (e.g. Google Flow / Veo).
+//    Carries generation metadata so in-app generation can be added later.
+export interface TourVideo {
+  url?: string; // playable when status === 'ready'
+  poster?: string;
+  durationSec?: number; // authored hint; runtime prefers the loaded video's duration
+  status: TourVideoStatus;
+  provider?: 'google-flow' | 'local'; // local = free in-browser Ken Burns render
+  sourcePhotos?: string[]; // photos the clip was generated from
+  generatedAt?: string; // ISO timestamp
+}
+
+//  A room's position inside the continuous walkthrough video.
+export interface TourChapter {
+  roomId: string; // matches a TourRoom.id
+  startSec: number; // end is the next chapter's start (or the video's end)
+}
+
+//  One clip in a synthesized playlist full video.
+export interface TourSegment {
+  roomId: string;
+  url: string;
+  durationSec: number; // nominal; runtime corrects from loadedmetadata
+}
+
+export interface TourFullVideo extends TourVideo {
+  chapters: TourChapter[];
+//    When present, the full video is a sequential playlist of these clips
+//    (synthesized from per-room generated clips); `url` is unused.
+  segments?: TourSegment[];
+}
+
+//  One stop on the walkthrough — rendered as a video clip when one is ready,
+//    else a still image, else a cinematic gradient placeholder.
 export interface TourRoom {
   id: string;
   name: string;
@@ -483,8 +523,10 @@ export interface TourRoom {
 //    Gradient stops for the placeholder scene (hex).
   from: string;
   to: string;
-//    Optional real media URL (image/video); falls back to the gradient scene.
-  media?: string;
+//    Optional still image URL; used when no ready clip exists.
+  image?: string;
+//    Optional generated walkthrough clip for this room.
+  clip?: TourVideo;
   hotspots: TourHotspot[];
 }
 
@@ -492,4 +534,6 @@ export interface PropertyTour {
   propertyId: string;
   title: string;
   rooms: TourRoom[];
+//    Optional continuous walkthrough video with per-room chapters.
+  fullVideo?: TourFullVideo;
 }

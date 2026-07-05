@@ -1,22 +1,29 @@
 import type { MaintenanceTicket } from '../types';
-import { maintenanceTickets } from '../data/maintenance';
-import { mockResponse } from './client';
+import { apiGet, apiPost } from './client';
+import { mapMaintenance, type BookingResponseDto, type MaintenanceResponseDto } from './backend';
+import { getPropertyById } from './properties';
 
-export function getMaintenanceTickets(): Promise<MaintenanceTicket[]> {
-  // return apiGet<MaintenanceTicket[]>('/maintenance');
-  return mockResponse(maintenanceTickets);
+export async function getMaintenanceTickets(): Promise<MaintenanceTicket[]> {
+  const dtos = await apiGet<MaintenanceResponseDto[]>('/api/maintenance/mine');
+  return Promise.all(
+    dtos.map(async (dto) => mapMaintenance(dto, await getPropertyById(dto.propertyId))),
+  );
 }
 
-export function createMaintenanceTicket(
+export async function createMaintenanceTicket(
   input: Pick<MaintenanceTicket, 'title' | 'category'>,
 ): Promise<MaintenanceTicket> {
-  // return apiPost<MaintenanceTicket>('/maintenance', input);
-  return mockResponse({
-    id: Date.now(),
-    title: input.title,
+  // The API requires a propertyId; report against the most recent booking.
+  const bookings = await apiGet<BookingResponseDto[]>('/api/bookings/user/my-bookings');
+  const target = bookings.find((b) => b.status !== 4); // any non-cancelled booking
+  if (!target) {
+    throw new Error('You need an active booking before reporting a maintenance issue.');
+  }
+  const dto = await apiPost<MaintenanceResponseDto>('/api/maintenance', {
+    propertyId: target.propertyId,
     category: input.category,
-    property: '2 Bedroom Apartment',
-    status: 'pending',
-    reportedOn: 'Just now',
+    description: input.title,
+    priority: 'Medium',
   });
+  return mapMaintenance(dto, await getPropertyById(dto.propertyId));
 }

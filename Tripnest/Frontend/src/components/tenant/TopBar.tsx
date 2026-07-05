@@ -1,8 +1,7 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
-  MenuIcon, SearchIcon, MapPinIcon, BellIcon, MailIcon, ChevronDownIcon,
+  MenuIcon, SearchIcon, BellIcon, MailIcon,
 } from './icons';
-import { currentUser } from '../../data/user';
 import { useSession } from '../../store/authStore';
 import Avatar from '../ui/Avatar';
 
@@ -10,80 +9,62 @@ interface TopBarProps {
   onMenu: () => void;
 }
 
-function IconButton({ children, count, label, onClick }: { children: React.ReactNode; count?: number; label: string; onClick?: () => void }) {
+/** Circular hairline icon button, Wander-style. */
+function IconButton({ children, label, onClick }: { children: React.ReactNode; label: string; onClick?: () => void }) {
   return (
-    <button onClick={onClick} aria-label={label} className="relative flex h-10 w-10 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100">
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-ink transition-colors hover:bg-gray-50"
+    >
       {children}
-      {count != null && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold text-white">
-          {count}
-        </span>
-      )}
     </button>
   );
 }
 
 export default function TopBar({ onMenu }: TopBarProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const session = useSession();
-  const isLandlord = location.pathname.startsWith('/landlord');
-  const displayName = session?.name ?? currentUser.name;
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-3">
+    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 sm:px-6">
       <button
         onClick={onMenu}
-        aria-label="Open menu"
-        className="flex h-10 w-10 items-center justify-center rounded-lg text-ink hover:bg-gray-100 lg:hidden"
+        aria-label="Toggle sidebar"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-gray-100"
       >
         <MenuIcon size={22} />
       </button>
 
-      <div className="relative hidden max-w-xl flex-1 sm:block">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
-          <SearchIcon size={18} />
+      <div className="relative hidden max-w-md flex-1 sm:block">
+        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+          <SearchIcon size={17} />
         </span>
         <input
           type="search"
-          placeholder="Search location, property ID or keyword..."
+          placeholder="Search location, property or keyword…"
           onKeyDown={(e) => e.key === 'Enter' && navigate('/search')}
-          className="w-full rounded-full border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm text-ink outline-none focus:border-brand"
+          className="w-full rounded-full border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-ink outline-none transition-colors placeholder:text-gray-400 focus:border-ink"
         />
       </div>
 
-      <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
-        <span className="hidden items-center gap-1.5 text-sm text-muted md:flex">
-          <MapPinIcon size={16} className="text-brand" />
-          {currentUser.location}
-        </span>
-
-        <IconButton label="Notifications" count={6} onClick={() => navigate('/notifications')}><BellIcon size={20} /></IconButton>
-        <IconButton label="Messages" count={3} onClick={() => navigate('/messages')}><MailIcon size={20} /></IconButton>
-
-        <div className="flex rounded-lg border border-gray-200 p-0.5 text-sm font-medium">
+      <div className="ml-auto flex items-center gap-2 sm:gap-2.5">
+        {session ? (
+          <>
+            <IconButton label="Notifications" onClick={() => navigate('/notifications')}><BellIcon size={18} /></IconButton>
+            <IconButton label="Messages" onClick={() => navigate('/messages')}><MailIcon size={18} /></IconButton>
+            <button onClick={() => navigate('/profile')} aria-label="Account" className="ml-0.5">
+              <Avatar name={session.name} size={40} />
+            </button>
+          </>
+        ) : (
           <button
-            onClick={() => navigate('/')}
-            className={`rounded-md px-3 py-1.5 transition-colors ${
-              isLandlord ? 'text-gray-600' : 'bg-brand-50 text-brand'
-            }`}
+            onClick={() => navigate('/welcome')}
+            className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-ink/90"
           >
-            Tenant
+            Sign in
           </button>
-          <button
-            onClick={() => navigate('/landlord')}
-            className={`rounded-md px-3 py-1.5 transition-colors ${
-              isLandlord ? 'bg-brand-50 text-brand' : 'text-gray-600'
-            }`}
-          >
-            Landlord
-          </button>
-        </div>
-
-        <button onClick={() => navigate('/profile')} aria-label="Account" className="flex items-center gap-1.5">
-          <Avatar name={displayName} size={36} />
-          <ChevronDownIcon size={16} className="hidden text-muted sm:block" />
-        </button>
+        )}
       </div>
     </header>
   );

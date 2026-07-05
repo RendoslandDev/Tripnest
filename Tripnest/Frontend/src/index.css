@@ -64,6 +64,59 @@
   .tn-card-in, .tn-rise { animation: none; }
 }
 
+/* --- Explore page: reveal-on-scroll + ambient motion ------------------------ */
+@keyframes tn-fade-up {
+  from { opacity: 0; transform: translateY(26px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes tn-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(12px, -16px) scale(1.06); }
+}
+.tn-reveal { opacity: 0; }
+.tn-reveal.tn-in {
+  animation: tn-fade-up .7s cubic-bezier(.22, .8, .3, 1) both;
+  animation-delay: var(--tn-delay, 0ms);
+}
+.tn-drift       { animation: tn-drift 9s ease-in-out infinite; }
+.tn-drift--slow { animation: tn-drift 14s ease-in-out infinite reverse; }
+.tn-lift { transition: transform .25s ease, box-shadow .25s ease; }
+.tn-lift:hover { transform: translateY(-4px); box-shadow: 0 14px 30px -14px rgba(8, 6, 13, .22); }
+
+/* Slowly pans the hero's oversized gradient for a living background. */
+@keyframes tn-gradient-pan {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.tn-gradient-pan {
+  background-size: 220% 220%;
+  animation: tn-gradient-pan 16s ease-in-out infinite;
+}
+
+/* Rotating word in the hero copy — each swap rises in. */
+@keyframes tn-word-in {
+  from { opacity: 0; transform: translateY(0.6em); filter: blur(3px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+.tn-word { display: inline-block; animation: tn-word-in .5s cubic-bezier(.22, .8, .3, 1) both; }
+
+/* Parallax layers glide toward the cursor (vars set by the hero's mousemove). */
+.tn-parallax {
+  transform: translate3d(calc(var(--mx, 0) * var(--depth, 10) * 1px),
+                         calc(var(--my, 0) * var(--depth, 10) * 1px), 0);
+  transition: transform .45s cubic-bezier(.22, .8, .3, 1);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tn-reveal { opacity: 1; }
+  .tn-reveal.tn-in, .tn-drift, .tn-drift--slow { animation: none; }
+  .tn-lift, .tn-lift:hover { transform: none; transition: none; box-shadow: none; }
+  .tn-gradient-pan, .tn-word { animation: none; }
+  .tn-parallax { transform: none; transition: none; }
+}
+
 /* Virtual tour cinematic motion. Disabled under prefers-reduced-motion via the
    motion-reduce:animate-none utility on the elements that use these. */
 @keyframes tour-kenburns {
@@ -84,11 +137,3 @@
   }
 }
 
-@keyframes tour-progress {
-  from {
-    width: 0%;
-  }
-  to {
-    width: 100%;
-  }
-}

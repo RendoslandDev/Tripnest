@@ -1,5 +1,5 @@
 import type { Payment, PaymentMethod, Transaction } from '../types';
-import { payments, paymentMethods } from '../data/payments';
+import { paymentMethods } from '../data/payments';
 import {
   initiatePayment as storeInitiate,
   verifyPayment as storeVerify,
@@ -8,27 +8,46 @@ import {
   type InitiateResult,
   type MomoNetwork,
 } from '../store/paymentStore';
-import { mockResponse } from './client';
+import { apiDownload, apiGet, mockResponse } from './client';
+import { formatIsoDate, type PagedResultDto, type ReceiptResponseDto } from './backend';
+import { getBookings } from './bookings';
 
-export function getPayments(): Promise<Payment[]> {
-  // return apiGet<Payment[]>('/payments');
-  return mockResponse(payments);
+/** Settled payments = the user's receipts. Joined against bookings for property names. */
+export async function getPayments(): Promise<Payment[]> {
+  const [paged, bookings] = await Promise.all([
+    apiGet<PagedResultDto<ReceiptResponseDto>>('/api/receipts/mine?page=1&pageSize=50'),
+    getBookings().catch(() => []),
+  ]);
+  const propertyByBooking = new Map(bookings.map((b) => [b.id, b.property]));
+  return paged.items.map((r) => ({
+    id: r.receiptId,
+    description: r.description || 'Booking payment',
+    property: propertyByBooking.get(r.bookingId) ?? `Booking ${r.bookingId.slice(0, 8).toUpperCase()}`,
+    date: formatIsoDate(r.createdAt),
+    amount: r.amount,
+    method: r.paymentMethod || 'Paystack',
+    status: 'paid' as const,
+  }));
 }
 
+export function downloadReceipt(receiptId: string): Promise<void> {
+  return apiDownload(`/api/receipts/${receiptId}/download`, `tripnest-receipt-${receiptId.slice(0, 8)}.pdf`);
+}
+
+// Saved payment methods have no backend yet (Paystack's hosted page collects
+// the instrument per charge) — still mock-backed.
 export function getPaymentMethods(): Promise<PaymentMethod[]> {
-  // return apiGet<PaymentMethod[]>('/payments/methods');
   return mockResponse(paymentMethods);
 }
 
-/** Open a payment with the provider (Paystack). Real impl: POST /payments/initiate. */
+// Legacy in-browser charge simulation. Real checkout now goes through
+// api/escrow.ts (booking → escrow initiate → hosted Paystack page); these
+// remain only for mock-backed surfaces that haven't moved yet.
 export function initiatePayment(input: InitiatePaymentInput): Promise<InitiateResult> {
-  // return apiPost<InitiateResult>('/payments/initiate', input);
   return mockResponse(storeInitiate(input));
 }
 
-/** Verify a payment's outcome. Real impl: GET /payments/:reference/verify. */
 export function verifyPayment(reference: string): Promise<Transaction> {
-  // return apiGet<Transaction>(`/payments/${reference}/verify`);
   return mockResponse(storeVerify(reference));
 }
 

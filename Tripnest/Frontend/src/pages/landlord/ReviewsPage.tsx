@@ -59,7 +59,7 @@ function ReviewCard({ review, onReply }: { review: LandlordReview; onReply: (id:
                 placeholder="Write a public reply…"
                 className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand"
               />
-              <Button type="submit" size="sm">Post</Button>
+              <Button variant="dark" type="submit" size="sm">Post</Button>
             </form>
           ) : (
             <Button size="sm" variant="ghost" className="mt-2 px-0 hover:bg-transparent" onClick={() => setOpen(true)}>
@@ -82,7 +82,7 @@ function ReviewsView({ initial }: { initial: LandlordReview[] }) {
 
   return (
     <div>
-      <h1 className="mb-6 text-3xl font-bold text-ink">Reviews</h1>
+      <h1 className="mb-6 text-3xl font-bold tracking-tight text-ink">Reviews</h1>
 
       <Card className="mb-6 flex flex-col gap-6 p-6 sm:flex-row sm:items-center">
         <div className="text-center">

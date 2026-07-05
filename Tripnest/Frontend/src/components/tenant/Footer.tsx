@@ -1,50 +1,149 @@
-import { HexIcon, FacebookIcon, InstagramIcon, TwitterIcon, LinkedinIcon } from './icons';
+import { Link } from 'react-router-dom';
+import {
+  FacebookIcon,
+  HexIcon,
+  InstagramIcon,
+  LinkedinIcon,
+  MapPinIcon,
+  ShieldIcon,
+  TwitterIcon,
+} from './icons';
 
-const LINKS = ['About Us', 'How it works', 'Terms & Conditions', 'Privacy Policy', 'Contact Us'];
-const PROVIDERS = ['MTN', 'Vodafone Cash', 'AirtelTigo'];
+const COLUMNS: { heading: string; links: { label: string; to: string }[] }[] = [
+  {
+    heading: 'Explore',
+    links: [
+      { label: 'Search homes', to: '/search' },
+      { label: 'Nearby places', to: '/nearby' },
+      { label: 'Saved listings', to: '/saved' },
+      { label: 'Why TripNest', to: '/explore' },
+    ],
+  },
+  {
+    heading: 'Hosting',
+    links: [
+      { label: 'Become a landlord', to: '/welcome?mode=signup&role=landlord' },
+      { label: 'Host dashboard', to: '/landlord' },
+      { label: 'Caretakers', to: '/caretakers' },
+      { label: 'Agents', to: '/agents' },
+    ],
+  },
+  {
+    heading: 'Support',
+    links: [
+      { label: 'Help & support', to: '/help' },
+      { label: 'Maintenance', to: '/maintenance' },
+      { label: 'Terms & conditions', to: '#' },
+      { label: 'Privacy policy', to: '#' },
+    ],
+  },
+];
+
+const SOCIALS = [
+  { label: 'TripNest on Facebook', icon: <FacebookIcon size={16} /> },
+  { label: 'TripNest on Instagram', icon: <InstagramIcon size={16} /> },
+  { label: 'TripNest on Twitter', icon: <TwitterIcon size={16} /> },
+  { label: 'TripNest on LinkedIn', icon: <LinkedinIcon size={16} /> },
+];
+
+const PROVIDERS = ['MTN MoMo', 'Telecel Cash', 'AirtelTigo', 'Visa · Mastercard'];
+
+function FooterLink({ label, to }: { label: string; to: string }) {
+  const cls = 'text-sm text-white/60 no-underline transition-colors hover:text-white';
+  return to.startsWith('#') ? (
+    <a href={to} className={cls}>{label}</a>
+  ) : (
+    <Link to={to} className={cls}>{label}</Link>
+  );
+}
 
 export default function Footer() {
   return (
-    <footer className="border-t border-gray-200 bg-white">
-      <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-muted">We accept</span>
-          <div className="flex items-center gap-2">
+    <footer className="bg-ink text-white">
+      {/* Brand accent line */}
+      <div aria-hidden className="h-1 bg-gradient-to-r from-brand via-emerald-400 to-brand" />
+
+      <div className="mx-auto max-w-6xl px-6">
+        {/* Top: brand + link columns */}
+        <div className="grid grid-cols-1 gap-10 py-12 md:grid-cols-12">
+          <div className="md:col-span-5 lg:col-span-4">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-emerald-500 text-white">
+                <HexIcon size={20} />
+              </span>
+              <span>
+                <span className="block text-lg font-bold leading-tight">TripNest</span>
+                <span className="block text-xs uppercase tracking-widest text-emerald-300">
+                  Find · Stay · Thrive
+                </span>
+              </span>
+            </div>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">
+              Verified homes across Ghana with identity-checked hosts and escrow-protected
+              payments — from one night to a whole year.
+            </p>
+            <div className="mt-5 flex items-center gap-2">
+              {SOCIALS.map((s) => (
+                <a
+                  key={s.label}
+                  href="#"
+                  aria-label={s.label}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-white/70 transition-colors hover:border-emerald-400 hover:text-emerald-300"
+                >
+                  {s.icon}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 md:col-span-7 lg:col-span-8">
+            {COLUMNS.map((col) => (
+              <div key={col.heading}>
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/40">
+                  {col.heading}
+                </h3>
+                <ul className="space-y-2.5">
+                  {col.links.map((l) => (
+                    <li key={l.label}>
+                      <FooterLink {...l} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Trust strip */}
+        <div className="flex flex-col gap-4 border-t border-white/10 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mr-1 text-sm text-white/50">We accept</span>
             {PROVIDERS.map((p) => (
               <span
                 key={p}
-                className="rounded-md border border-gray-200 px-2.5 py-1 text-xs font-semibold text-ink"
+                className="rounded-full border border-white/15 px-3 py-1 text-xs font-semibold text-white/80"
               >
                 {p}
               </span>
             ))}
           </div>
-        </div>
-        <p className="text-sm text-muted">Trusted by thousands in Tarkwa</p>
-      </div>
-
-      <div className="flex flex-col gap-4 px-6 py-5 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-brand text-white">
-            <HexIcon size={16} />
-          </span>
-          <span className="text-sm text-muted">© 2025 TripNest. All rights reserved.</span>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/50">
+            <span className="flex items-center gap-1.5">
+              <ShieldIcon size={14} className="text-emerald-300" /> Escrow-protected payments
+            </span>
+            <span className="flex items-center gap-1.5">
+              <MapPinIcon size={14} className="text-emerald-300" /> Made in Ghana
+            </span>
+          </div>
         </div>
 
-        <nav className="flex flex-wrap gap-x-5 gap-y-2">
-          {LINKS.map((link) => (
-            <a key={link} href="#" className="text-sm text-muted no-underline hover:text-ink">
-              {link}
-            </a>
-          ))}
-        </nav>
-
-        <div className="flex items-center gap-3 text-muted">
-          <span className="text-sm">Follow us</span>
-          <a href="#" aria-label="TripNest on Facebook" className="hover:text-ink"><FacebookIcon size={18} /></a>
-          <a href="#" aria-label="TripNest on Instagram" className="hover:text-ink"><InstagramIcon size={18} /></a>
-          <a href="#" aria-label="TripNest on Twitter" className="hover:text-ink"><TwitterIcon size={18} /></a>
-          <a href="#" aria-label="TripNest on LinkedIn" className="hover:text-ink"><LinkedinIcon size={18} /></a>
+        {/* Bottom bar */}
+        <div className="flex flex-col gap-2 border-t border-white/10 py-5 text-sm text-white/40 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} TripNest. All rights reserved.</p>
+          <p>
+            Built for renters and hosts across{' '}
+            <span className="font-semibold text-white/70">18+ Ghanaian cities</span>.
+          </p>
         </div>
       </div>
     </footer>

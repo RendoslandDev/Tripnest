@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChatMessage, Conversation } from '../../types';
-import { getConversations, getMessages } from '../../api/messages';
+import { getConversations, getMessages, markConversationRead, sendMessage } from '../../api/messages';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import Card from '../../components/ui/Card';
@@ -130,11 +130,21 @@ function Thread({ conversation }: { conversation: Conversation }) {
   const append = (item: Omit<ChatItem, 'id' | 'fromMe' | 'time'>) =>
     setSent((s) => [...s, { id: Date.now(), fromMe: true, time: 'Now', ...item }]);
 
-  const send = () => {
+  const send = async () => {
     const text = draft.trim();
     if (!text) return;
-    append({ text });
     setDraft('');
+    // Optimistic bubble, reconciled with the saved message from the API.
+    const tempId = `pending-${Date.now()}`;
+    setSent((s) => [...s, { id: tempId, fromMe: true, time: 'Sending…', text }]);
+    try {
+      const saved = await sendMessage(conversation.id, text);
+      setSent((s) => s.map((m) => (m.id === tempId ? saved : m)));
+    } catch {
+      setSent((s) => s.filter((m) => m.id !== tempId));
+      setDraft(text); // give the user their message back to retry
+      setBanner('Message failed to send.');
+    }
   };
 
   const onAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -283,7 +293,7 @@ function Thread({ conversation }: { conversation: Conversation }) {
                 <input
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && send()}
+                  onKeyDown={(e) => { if (e.key === 'Enter') void send(); }}
                   placeholder="Type a message…"
                   className="w-full bg-transparent px-1 py-1.5 text-sm text-ink outline-none placeholder:text-muted"
                 />
@@ -302,7 +312,7 @@ function Thread({ conversation }: { conversation: Conversation }) {
                     {draft.trim() ? (
                       <button
                         type="button"
-                        onClick={send}
+                        onClick={() => void send()}
                         aria-label="Send message"
                         className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white transition-opacity hover:bg-brand/90"
                       >
@@ -365,10 +375,12 @@ function MessagesView({ conversations }: { conversations: Conversation[] }) {
 
   const current = rows.find((c) => c.id === selectedId) ?? rows[0];
 
-  const open = (id: number) => {
+  const open = (id: string | number) => {
     setSelectedId(id);
-    // Opening a conversation clears its unread count.
+    // Opening a conversation clears its unread state locally and server-side.
+    const wasUnread = rows.some((c) => c.id === id && c.unread > 0);
     setRows((rs) => rs.map((c) => (c.id === id ? { ...c, unread: 0 } : c)));
+    if (wasUnread) markConversationRead(id).catch(() => {});
   };
 
   return (

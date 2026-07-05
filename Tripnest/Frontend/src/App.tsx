@@ -3,6 +3,7 @@ import MarketplaceLayout from './layouts/MarketplaceLayout';
 import DashboardLayout from './layouts/DashboardLayout';
 import LandlordLayout from './layouts/LandlordLayout';
 import RequireAuth from './components/RequireAuth';
+import { useSession } from './store/authStore';
 import WelcomePage from './pages/WelcomePage';
 import LandlordHome from './pages/landlord/LandlordHome';
 import EarningsPage from './pages/landlord/EarningsPage';
@@ -19,19 +20,23 @@ import { TENANT_NAV_ITEMS } from './components/tenant/navConfig';
 import { lazy, Suspense } from 'react';
 import HomePage from './pages/tenant/HomePage';
 import SearchPage from './pages/tenant/SearchPage';
+import ExplorePage from './pages/tenant/ExplorePage';
 
 // Map page pulls in Leaflet — load it on demand to keep the main bundle lean.
 const NearbyPage = lazy(() => import('./pages/tenant/NearbyPage'));
 import SavedPage from './pages/tenant/SavedPage';
 import PropertyDetailPage from './pages/tenant/PropertyDetailPage';
 import CheckoutPage from './pages/tenant/CheckoutPage';
+import PaymentCallbackPage from './pages/tenant/PaymentCallbackPage';
 import BookingsPage from './pages/tenant/BookingsPage';
 import AgreementsPage from './pages/tenant/AgreementsPage';
 import PaymentsPage from './pages/tenant/PaymentsPage';
 import MessagesPage from './pages/tenant/MessagesPage';
 import NotificationsPage from './pages/tenant/NotificationsPage';
 import ServiceDirectory from './pages/tenant/ServiceDirectory';
+import ProviderDetailPage from './pages/tenant/ProviderDetailPage';
 import MaintenancePage from './pages/tenant/MaintenancePage';
+import TenantDashboardPage from './pages/tenant/DashboardPage';
 import ProfilePage from './pages/tenant/ProfilePage';
 import SettingsPage from './pages/tenant/SettingsPage';
 import HelpPage from './pages/tenant/HelpPage';
@@ -47,8 +52,15 @@ import UsersPage from './pages/UsersPage';
 import OwnerExchangePage from './pages/OwnerExchangePage';
 import ResourcesPage from './pages/ResourcesPage';
 
+/** Visitors are onboarded through Explore first; signed-in users get their home. */
+function Landing() {
+  const session = useSession();
+  return session ? <HomePage /> : <Navigate to="/explore" replace />;
+}
+
 const TENANT_PAGES: Record<string, ReactNode> = {
-  '/': <HomePage />,
+  '/': <Landing />,
+  '/overview': <TenantDashboardPage />,
   '/search': <SearchPage />,
   '/nearby': (
     <Suspense fallback={<p className="text-muted">Loading map…</p>}>
@@ -76,19 +88,30 @@ const TENANT_PAGES: Record<string, ReactNode> = {
   '/help': <HelpPage />,
 };
 
+// Marketplace pages that need a signed-in user. Everything else (home,
+// search, nearby, property pages, service directories) is open to guests.
+const AUTH_ONLY_TENANT_PATHS = new Set([
+  '/overview', '/saved', '/bookings', '/agreements', '/payments', '/messages',
+  '/notifications', '/maintenance', '/profile', '/settings',
+]);
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Onboarding / auth (public) */}
+        {/* Onboarding: Explore introduces TripNest, then hands off to auth */}
+        <Route path="/explore" element={<ExplorePage />} />
         <Route path="/welcome" element={<WelcomePage />} />
 
-        {/* Tenant marketplace */}
-        <Route path="/" element={<RequireAuth><MarketplaceLayout /></RequireAuth>}>
+        {/* Tenant marketplace — browsing is public; personal pages need a login */}
+        <Route path="/" element={<MarketplaceLayout />}>
           {TENANT_NAV_ITEMS.map((item) => {
-            const element: ReactNode = TENANT_PAGES[item.path] ?? (
+            let element: ReactNode = TENANT_PAGES[item.path] ?? (
               <PagePlaceholder title={item.label} />
             );
+            if (AUTH_ONLY_TENANT_PATHS.has(item.path)) {
+              element = <RequireAuth>{element}</RequireAuth>;
+            }
             return item.path === '/' ? (
               <Route key={item.path} index element={element} />
             ) : (
@@ -96,12 +119,18 @@ export default function App() {
             );
           })}
           <Route path="property/:id" element={<PropertyDetailPage />} />
-          <Route path="checkout/:id" element={<CheckoutPage />} />
+          <Route path="providers/:id" element={<ProviderDetailPage />} />
+          <Route path="checkout/:id" element={<RequireAuth><CheckoutPage /></RequireAuth>} />
+          <Route path="payment/callback" element={<RequireAuth><PaymentCallbackPage /></RequireAuth>} />
         </Route>
 
-        {/* Landlord marketplace (separate surface from the tenant area and host dashboard) */}
-        <Route path="/landlord" element={<RequireAuth><LandlordLayout /></RequireAuth>}>
+        {/* Landlord marketplace — only landlord accounts */}
+        <Route path="/landlord" element={<RequireAuth role="landlord"><LandlordLayout /></RequireAuth>}>
           <Route index element={<LandlordHome />} />
+          <Route path="reservations" element={<ReservationPage />} />
+          <Route path="calendar" element={<CalendarPage />} />
+          <Route path="pricing" element={<PricingPage />} />
+          <Route path="statements" element={<StatementsPage />} />
           <Route path="listings" element={<LandlordListingsPage />} />
           <Route path="inquiries" element={<InquiriesPage />} />
           <Route path="bookings" element={<LandlordBookingsPage />} />
@@ -112,8 +141,8 @@ export default function App() {
           <Route path="help" element={<LandlordHelpPage />} />
         </Route>
 
-        {/* Host management dashboard */}
-        <Route path="/dashboard" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
+        {/* Host management dashboard — landlord-only */}
+        <Route path="/dashboard" element={<RequireAuth role="landlord"><DashboardLayout /></RequireAuth>}>
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<OverviewPage />} />
           <Route path="reservations" element={<ReservationPage />} />

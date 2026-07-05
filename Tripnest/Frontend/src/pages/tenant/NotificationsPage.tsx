@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Notification, NotificationType } from '../../types';
-import { getNotifications } from '../../api/notifications';
+import { getNotifications, markAllNotificationsRead, markNotificationRead } from '../../api/notifications';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import Card from '../../components/ui/Card';
@@ -20,9 +20,14 @@ function NotificationsView({ initial }: { initial: Notification[] }) {
   const [rows, setRows] = useState(initial);
   const unread = rows.filter((n) => !n.read).length;
 
-  const markAllRead = () => setRows((rs) => rs.map((n) => ({ ...n, read: true })));
-  const markRead = (id: number) =>
+  const markAllRead = () => {
+    setRows((rs) => rs.map((n) => ({ ...n, read: true })));
+    void markAllNotificationsRead().catch(() => { /* optimistic; refetch shows truth */ });
+  };
+  const markRead = (id: string | number) => {
     setRows((rs) => rs.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    void markNotificationRead(id).catch(() => { /* optimistic; refetch shows truth */ });
+  };
 
   return (
     <>

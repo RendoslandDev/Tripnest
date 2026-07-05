@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import {
   HomeIcon, KeyIcon, MessageIcon, CalendarIcon, CardIcon, UsersIcon, StarIcon,
-  SettingsIcon, HelpIcon,
+  SettingsIcon, HelpIcon, CheckIcon, BadgeIcon, FileIcon, ClockIcon,
 } from '../tenant/icons';
 
 export interface LandlordNavItem {
@@ -20,14 +20,20 @@ export interface LandlordNavGroup {
 
 export const LANDLORD_NAV: LandlordNavGroup[] = [
   {
-    items: [{ label: 'Overview', path: '/landlord', icon: <HomeIcon />, end: true }],
+    items: [
+      { label: 'Overview', path: '/landlord', icon: <HomeIcon />, end: true },
+      { label: 'Reservations', path: '/landlord/reservations', icon: <CheckIcon /> },
+      { label: 'Calendar', path: '/landlord/calendar', icon: <CalendarIcon /> },
+      { label: 'Pricing', path: '/landlord/pricing', icon: <BadgeIcon /> },
+      { label: 'Statements', path: '/landlord/statements', icon: <FileIcon /> },
+    ],
   },
   {
     heading: 'Manage',
     items: [
       { label: 'My Listings', path: '/landlord/listings', icon: <KeyIcon /> },
-      { label: 'Inquiries', path: '/landlord/inquiries', icon: <MessageIcon />, badge: 4 },
-      { label: 'Bookings', path: '/landlord/bookings', icon: <CalendarIcon /> },
+      { label: 'Inquiries', path: '/landlord/inquiries', icon: <MessageIcon /> },
+      { label: 'Bookings', path: '/landlord/bookings', icon: <ClockIcon /> },
       { label: 'Earnings', path: '/landlord/earnings', icon: <CardIcon /> },
     ],
   },

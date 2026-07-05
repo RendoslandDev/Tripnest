@@ -38,7 +38,7 @@ function BookingsView({ initial }: { initial: LandlordBooking[] }) {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-ink">Bookings</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-ink">Bookings</h1>
       <p className="mt-1 mb-6 text-sm text-muted">{pending} booking{pending === 1 ? '' : 's'} need your approval.</p>
 
       <div className="mb-6 flex flex-wrap gap-2">
@@ -78,15 +78,15 @@ function BookingsView({ initial }: { initial: LandlordBooking[] }) {
                 <div className="flex gap-2">
                   {b.status === 'pending' && (
                     <>
-                      <Button size="sm" onClick={() => setStatus(b.id, 'confirmed')}>Confirm</Button>
+                      <Button variant="dark" size="sm" onClick={() => setStatus(b.id, 'confirmed')}>Confirm</Button>
                       <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50" onClick={() => setStatus(b.id, 'cancelled')}>Decline</Button>
                     </>
                   )}
                   {b.status === 'confirmed' && (
-                    <Button size="sm" onClick={() => setStatus(b.id, 'checked-in')}>Check in</Button>
+                    <Button variant="dark" size="sm" onClick={() => setStatus(b.id, 'checked-in')}>Check in</Button>
                   )}
                   {b.status === 'checked-in' && (
-                    <Button size="sm" onClick={() => setStatus(b.id, 'completed')}>Mark complete</Button>
+                    <Button variant="dark" size="sm" onClick={() => setStatus(b.id, 'completed')}>Mark complete</Button>
                   )}
                 </div>
               </div>

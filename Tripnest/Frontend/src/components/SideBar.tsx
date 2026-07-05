@@ -134,7 +134,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-[260px] min-w-[260px] flex-col border-r border-gray-200 bg-[#f8f8f8] px-5 py-8 transition-transform lg:static lg:z-auto lg:translate-x-0 ${
+        className={`static inset-y-0 left-0 z-50 flex h-screen w-[260px] min-w-[260px] flex-col overflow-y-auto border-r border-gray-200 bg-[#f8f8f8] px-5 py-8 transition-transform lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

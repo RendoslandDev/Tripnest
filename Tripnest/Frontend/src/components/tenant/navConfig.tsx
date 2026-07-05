@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import {
   HomeIcon, SearchIcon, HeartIcon, CalendarIcon, MessageIcon, FileIcon, CardIcon,
   BellIcon, UsersIcon, SparkleIcon, ToolIcon, UserCheckIcon, UserIcon, SettingsIcon, HelpIcon,
-  MapPinIcon,
+  MapPinIcon, GridIcon,
 } from './icons';
 
 export interface TenantNavItem {
@@ -19,7 +19,10 @@ export interface TenantNavGroup {
 
 export const TENANT_NAV: TenantNavGroup[] = [
   {
-    items: [{ label: 'Home', path: '/', icon: <HomeIcon /> }],
+    items: [
+      { label: 'Home', path: '/', icon: <HomeIcon /> },
+      { label: 'Dashboard', path: '/overview', icon: <GridIcon /> },
+    ],
   },
   {
     heading: 'Main',

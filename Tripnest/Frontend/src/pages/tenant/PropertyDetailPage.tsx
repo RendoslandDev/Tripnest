@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { Property } from '../../types';
 import { getPropertyById } from '../../api/properties';
@@ -9,8 +9,10 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import BookingWidget from '../../components/tenant/BookingWidget';
-import VirtualTour from '../../components/tenant/tour/VirtualTour';
 import { AmenityIcon, ShieldIcon, StarIcon, MapPinIcon } from '../../components/tenant/icons';
+
+// Loaded on demand — see PropertyCard for the same pattern.
+const VirtualTour = lazy(() => import('../../components/tenant/tour/VirtualTour'));
 
 function Gallery({ onPlay }: { onPlay: () => void }) {
   return (
@@ -110,7 +112,11 @@ function Detail({ property }: { property: Property }) {
         </aside>
       </div>
 
-      {tourOpen && <VirtualTour propertyId={property.id} onClose={() => setTourOpen(false)} />}
+      {tourOpen && (
+        <Suspense fallback={null}>
+          <VirtualTour propertyId={property.id} onClose={() => setTourOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

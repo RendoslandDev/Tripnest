@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { signIn, useSession, nameFromEmail, type AuthProvider, type Role } from '../store/authStore';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { login, register, useSession, type Role } from '../store/authStore';
 import { HexIcon, UserIcon, KeyIcon, ShieldIcon, StarIcon } from '../components/tenant/icons';
 
 // Poster-style background tiles (Ghanaian cities), echoing the inspiration wall.
@@ -93,28 +93,52 @@ function RoleOption({ active, icon, title, desc, onClick }: {
 export default function WelcomePage() {
   const navigate = useNavigate();
   const session = useSession();
-  const [role, setRole] = useState<Role>('tenant');
+  // Deep links from marketing surfaces (e.g. /welcome?mode=signup&role=landlord).
+  const [params] = useSearchParams();
+  const [mode, setMode] = useState<'signin' | 'signup'>(
+    params.get('mode') === 'signup' ? 'signup' : 'signin',
+  );
+  const [role, setRole] = useState<Role>(params.get('role') === 'landlord' ? 'landlord' : 'tenant');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Already signed in → straight to the right surface.
   if (session) return <Navigate to={session.role === 'landlord' ? '/landlord' : '/'} replace />;
 
-  const finish = (provider: AuthProvider, emailAddr: string) => {
-    signIn({ email: emailAddr, name: nameFromEmail(emailAddr), role, provider });
-    navigate(role === 'landlord' ? '/landlord' : '/', { replace: true });
-  };
-
-  const continueEmail = (e: React.FormEvent) => {
+  const continueEmail = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!EMAIL_RE.test(email.trim())) {
+    const addr = email.trim().toLowerCase();
+    if (!EMAIL_RE.test(addr)) {
       setError('Enter a valid email address.');
       return;
     }
-    finish('email', email.trim().toLowerCase());
+    if (password.length < 6) {
+      setError('Enter your password (at least 6 characters).');
+      return;
+    }
+    if (mode === 'signup' && (!fullName.trim() || !phone.trim())) {
+      setError('Enter your full name and phone number.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const next = mode === 'signup'
+        ? await register({ fullName: fullName.trim(), email: addr, password, phone: phone.trim(), role })
+        : await login(addr, password);
+      navigate(next.role === 'landlord' ? '/landlord' : '/', { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Is the TripNest API running?');
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const social = (provider: AuthProvider) => finish(provider, `${role}@${provider}.tripnest`);
+  const social = () => setError('Social sign-in is not connected yet — use your email and password.');
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-ink">
@@ -172,24 +196,69 @@ export default function WelcomePage() {
             />
           </div>
 
-          {/* Email */}
+          {/* Email + password */}
           <form onSubmit={continueEmail} className="space-y-3">
+            {mode === 'signup' && (
+              <>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => { setFullName(e.target.value); setError(null); }}
+                  placeholder="Full name"
+                  aria-label="Full name"
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand"
+                />
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => { setPhone(e.target.value); setError(null); }}
+                  placeholder="Phone (e.g. 024 123 4567)"
+                  aria-label="Phone number"
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand"
+                />
+              </>
+            )}
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setError(null); }}
+              placeholder="Email address"
+              aria-label="Email address"
+              className={`w-full rounded-xl border px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand ${
+                error ? 'border-rose-400' : 'border-gray-300'
+              }`}
+            />
             <div>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setError(null); }}
-                placeholder="Email address"
-                aria-label="Email address"
+                type="password"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setError(null); }}
+                placeholder="Password"
+                aria-label="Password"
+                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                 className={`w-full rounded-xl border px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand ${
                   error ? 'border-rose-400' : 'border-gray-300'
                 }`}
               />
               {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
             </div>
-            <button type="submit" className="w-full rounded-xl bg-brand py-3 text-sm font-semibold text-white transition-colors hover:bg-brand/90">
-              Continue
+            <button
+              type="submit"
+              disabled={busy}
+              className="w-full rounded-xl bg-brand py-3 text-sm font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-wait disabled:opacity-60"
+            >
+              {busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Sign in'}
             </button>
+            <p className="text-center text-xs text-muted">
+              {mode === 'signup' ? 'Already have an account?' : 'New to TripNest?'}{' '}
+              <button
+                type="button"
+                onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError(null); }}
+                className="font-semibold text-brand"
+              >
+                {mode === 'signup' ? 'Sign in' : 'Create an account'}
+              </button>
+            </p>
           </form>
 
           {/* Divider */}
@@ -201,14 +270,14 @@ export default function WelcomePage() {
           <div className="space-y-2.5">
             <button
               type="button"
-              onClick={() => social('google')}
+              onClick={social}
               className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-gray-300 py-3 text-sm font-semibold text-ink transition-colors hover:bg-gray-50"
             >
               <GoogleMark /> Continue with Google
             </button>
             <button
               type="button"
-              onClick={() => social('apple')}
+              onClick={social}
               className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-gray-300 py-3 text-sm font-semibold text-ink transition-colors hover:bg-gray-50"
             >
               <AppleMark /> Continue with Apple

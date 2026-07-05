@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Property } from '../../types';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { formatCedi } from '../../lib/format';
 import { quotePrice } from '../../store/bookingStore';
-import { ShieldIcon } from './icons';
+import { isSpanAvailable } from '../../api/calendar';
+import { CheckIcon, ShieldIcon } from './icons';
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -32,6 +33,10 @@ export default function BookingWidget({ property }: { property: Property }) {
   const [checkInISO, setCheckInISO] = useState(defaultIn);
   const [checkOutISO, setCheckOutISO] = useState(addDaysISO(defaultIn, defaultNights));
   const [guests, setGuests] = useState(2);
+  // Availability of the selected span, from the live calendar (confirmed
+  // bookings + landlord blocks). 'unknown' (offline/mock) doesn't block —
+  // the server re-checks on booking anyway.
+  const [availability, setAvailability] = useState<'checking' | 'open' | 'taken' | 'unknown'>('unknown');
 
   const quote = useMemo(
     () => quotePrice(property, checkInISO, checkOutISO),
@@ -41,8 +46,20 @@ export default function BookingWidget({ property }: { property: Property }) {
   const valid = quote.nights > 0;
   const minCheckOut = addDaysISO(checkInISO, 1);
 
+  useEffect(() => {
+    if (quote.nights <= 0) return;
+    let cancelled = false;
+    setAvailability('checking');
+    isSpanAvailable(property.id, checkInISO, checkOutISO)
+      .then((open) => !cancelled && setAvailability(open ? 'open' : 'taken'))
+      .catch(() => !cancelled && setAvailability('unknown'));
+    return () => {
+      cancelled = true;
+    };
+  }, [property.id, checkInISO, checkOutISO, quote.nights]);
+
   const reserve = () => {
-    if (!valid) return;
+    if (!valid || availability === 'taken') return;
     const selection: BookingSelection = { checkInISO, checkOutISO, guests };
     navigate(`/checkout/${property.id}`, { state: selection });
   };
@@ -131,12 +148,30 @@ export default function BookingWidget({ property }: { property: Property }) {
         </div>
       )}
 
-      <Button className="mt-4 w-full" onClick={reserve} disabled={!valid}>
-        {property.tag === 'Instant Book' ? 'Instant Book' : 'Reserve'}
+      <Button
+        className="mt-4 w-full"
+        onClick={reserve}
+        disabled={!valid || availability === 'taken' || availability === 'checking'}
+      >
+        {availability === 'checking'
+          ? 'Checking dates…'
+          : property.tag === 'Instant Book'
+            ? 'Instant Book'
+            : 'Reserve'}
       </Button>
       {!valid && (
         <p className="mt-2 text-center text-xs text-rose-600">
           Check-out must be after check-in.
+        </p>
+      )}
+      {valid && availability === 'taken' && (
+        <p className="mt-2 text-center text-xs text-rose-600" role="alert">
+          Those dates are already booked or blocked — try different ones.
+        </p>
+      )}
+      {valid && availability === 'open' && (
+        <p className="mt-2 flex items-center justify-center gap-1 text-center text-xs font-medium text-brand">
+          <CheckIcon size={12} /> Dates available
         </p>
       )}
       <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted">

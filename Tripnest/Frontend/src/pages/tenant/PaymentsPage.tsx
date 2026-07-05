@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Payment, PaymentChannel, PaymentMethod, PaymentStatus } from '../../types';
-import { getPayments, getPaymentMethods, initiatePayment, verifyPayment } from '../../api/payments';
+import { downloadReceipt, getPayments, getPaymentMethods, initiatePayment, verifyPayment } from '../../api/payments';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import Card from '../../components/ui/Card';
@@ -8,7 +8,14 @@ import Button from '../../components/ui/Button';
 import Badge, { type BadgeTone } from '../../components/ui/Badge';
 import { formatCedi } from '../../lib/format';
 import { currentUser } from '../../data/user';
-import { CardIcon, PlusIcon } from '../../components/tenant/icons';
+import {
+  CalendarIcon,
+  CardIcon,
+  CheckIcon,
+  ClockIcon,
+  PlusIcon,
+  ShieldIcon,
+} from '../../components/tenant/icons';
 
 const STATUS: Record<PaymentStatus, { tone: BadgeTone; label: string }> = {
   paid: { tone: 'green', label: 'Paid' },
@@ -16,9 +23,67 @@ const STATUS: Record<PaymentStatus, { tone: BadgeTone; label: string }> = {
   upcoming: { tone: 'gray', label: 'Upcoming' },
 };
 
+/** Toned icon chip shown at the left of each history row. */
+const STATUS_CHIP: Record<PaymentStatus, string> = {
+  paid: 'bg-brand-50 text-brand',
+  due: 'bg-amber-50 text-amber-600',
+  upcoming: 'bg-gray-100 text-gray-500',
+};
+
+const FILTERS: { id: 'all' | PaymentStatus; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'due', label: 'Due' },
+  { id: 'upcoming', label: 'Upcoming' },
+  { id: 'paid', label: 'Paid' },
+];
+
+/** Brand accent for a payment method's provider chip. */
+function providerAccent(provider: string): string {
+  if (/mtn/i.test(provider)) return 'bg-amber-400 text-amber-950';
+  if (/telecel|vodafone/i.test(provider)) return 'bg-rose-500 text-white';
+  if (/airtel|tigo/i.test(provider)) return 'bg-blue-600 text-white';
+  return 'bg-ink text-white';
+}
+
+function providerInitials(provider: string): string {
+  return provider
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 3)
+    .toUpperCase();
+}
+
 /** Infer the provider channel so the charge routes correctly. */
 function channelFor(method: PaymentMethod | undefined): PaymentChannel {
   return method && /card|visa|master/i.test(method.provider) ? 'card' : 'momo';
+}
+
+function StatCard({
+  label,
+  value,
+  hint,
+  icon,
+  chip,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  icon: React.ReactNode;
+  chip: string;
+}) {
+  return (
+    <Card className="flex items-center gap-4 p-5">
+      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${chip}`}>
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-xs font-semibold uppercase tracking-wide text-muted">{label}</span>
+        <span className="block truncate text-xl font-bold text-ink">{value}</span>
+        <span className="block text-xs text-muted">{hint}</span>
+      </span>
+    </Card>
+  );
 }
 
 function AddMethodForm({ onAdd }: { onAdd: (m: PaymentMethod) => void }) {
@@ -42,18 +107,22 @@ function AddMethodForm({ onAdd }: { onAdd: (m: PaymentMethod) => void }) {
 
   if (!open) {
     return (
-      <Button variant="ghost" size="sm" className="mt-1 w-full" onClick={() => setOpen(true)}>
-        <PlusIcon size={16} /> <span className="ml-1.5">Add method</span>
-      </Button>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gray-300 px-3 py-3 text-sm font-semibold text-muted transition-colors hover:border-brand hover:text-brand"
+      >
+        <PlusIcon size={16} /> Add payment method
+      </button>
     );
   }
 
   return (
-    <form onSubmit={submit} className="mt-2 space-y-2 rounded-lg border border-gray-100 p-3">
+    <form onSubmit={submit} className="mt-2 space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
       <select
         value={provider}
         onChange={(e) => setProvider(e.target.value)}
-        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
       >
         <option>MTN MoMo</option>
         <option>Telecel Cash</option>
@@ -65,7 +134,7 @@ function AddMethodForm({ onAdd }: { onAdd: (m: PaymentMethod) => void }) {
         onChange={(e) => setNumber(e.target.value)}
         inputMode="numeric"
         placeholder="Phone or card number"
-        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink outline-none focus:border-brand"
+        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
       />
       <div className="flex gap-2">
         <Button type="submit" size="sm" className="flex-1">Save</Button>
@@ -75,11 +144,111 @@ function AddMethodForm({ onAdd }: { onAdd: (m: PaymentMethod) => void }) {
   );
 }
 
+function MethodRow({
+  method,
+  onSetPrimary,
+}: {
+  method: PaymentMethod;
+  onSetPrimary: (id: string) => void;
+}) {
+  return (
+    <div
+      className={`flex items-center gap-3 rounded-xl border px-3 py-3 transition-colors ${
+        method.primary ? 'border-brand bg-brand-50/50' : 'border-gray-100 hover:bg-gray-50'
+      }`}
+    >
+      <span
+        className={`flex h-10 w-12 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold tracking-wide ${providerAccent(method.provider)}`}
+      >
+        {providerInitials(method.provider)}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-ink">{method.provider}</span>
+        <span className="block text-xs text-muted">{method.number}</span>
+      </span>
+      {method.primary ? (
+        <Badge tone="green">Primary</Badge>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onSetPrimary(method.id)}
+          className="shrink-0 text-xs font-semibold text-brand hover:underline"
+        >
+          Set primary
+        </button>
+      )}
+    </div>
+  );
+}
+
+function PaymentRow({
+  payment,
+  paying,
+  onPay,
+  onDownload,
+}: {
+  payment: Payment;
+  paying: boolean;
+  onPay: (p: Payment) => void;
+  onDownload: (p: Payment) => void;
+}) {
+  const meta = STATUS[payment.status];
+  return (
+    <div className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-gray-50/70">
+      <span
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${STATUS_CHIP[payment.status]}`}
+      >
+        {payment.status === 'paid' ? (
+          <CheckIcon size={16} />
+        ) : payment.status === 'due' ? (
+          <ClockIcon size={16} />
+        ) : (
+          <CalendarIcon size={16} />
+        )}
+      </span>
+
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-ink">{payment.description}</span>
+        <span className="block truncate text-xs text-muted">{payment.property}</span>
+      </span>
+
+      <span className="hidden w-32 shrink-0 text-sm text-muted md:block">{payment.date}</span>
+      <span className="hidden w-32 shrink-0 truncate text-sm text-muted lg:block">{payment.method}</span>
+
+      <span className="w-24 shrink-0 text-right text-sm font-bold text-ink">
+        {formatCedi(payment.amount)}
+      </span>
+
+      <span className="hidden w-24 shrink-0 text-right sm:block">
+        <Badge tone={meta.tone}>{meta.label}</Badge>
+      </span>
+
+      <span className="w-20 shrink-0 text-right">
+        {payment.status === 'due' && (
+          <Button size="sm" onClick={() => onPay(payment)} disabled={paying}>
+            {paying ? '…' : 'Pay'}
+          </Button>
+        )}
+        {payment.status === 'paid' && (
+          <button
+            type="button"
+            onClick={() => onDownload(payment)}
+            className="text-xs font-semibold text-brand hover:underline"
+          >
+            Receipt
+          </button>
+        )}
+      </span>
+    </div>
+  );
+}
+
 function PaymentsView({
   initialPayments, initialMethods,
 }: { initialPayments: Payment[]; initialMethods: PaymentMethod[] }) {
   const [payments, setPayments] = useState(initialPayments);
   const [methods, setMethods] = useState(initialMethods);
+  const [filter, setFilter] = useState<'all' | PaymentStatus>('all');
   const [payingId, setPayingId] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +261,20 @@ function PaymentsView({
 
   const primary = methods.find((m) => m.primary) ?? methods[0];
   const nextDue = payments.find((p) => p.status === 'due');
+
+  const totals = useMemo(() => {
+    const sum = (status: PaymentStatus) =>
+      payments.filter((p) => p.status === status).reduce((acc, p) => acc + p.amount, 0);
+    return { paid: sum('paid'), due: sum('due'), upcoming: sum('upcoming') };
+  }, [payments]);
+
+  const counts = useMemo(() => {
+    const c: Record<'all' | PaymentStatus, number> = { all: payments.length, paid: 0, due: 0, upcoming: 0 };
+    payments.forEach((p) => { c[p.status] += 1; });
+    return c;
+  }, [payments]);
+
+  const visible = filter === 'all' ? payments : payments.filter((p) => p.status === filter);
 
   const pay = async (payment: Payment) => {
     setError(null);
@@ -117,6 +300,13 @@ function PaymentsView({
     }
   };
 
+  const download = (payment: Payment) => {
+    setError(null);
+    downloadReceipt(payment.id).catch(() =>
+      setError('Could not download that receipt. Please try again.'),
+    );
+  };
+
   const addMethod = (m: PaymentMethod) =>
     setMethods((ms) => [...ms, ms.length === 0 ? { ...m, primary: true } : m]);
 
@@ -124,103 +314,138 @@ function PaymentsView({
     setMethods((ms) => ms.map((m) => ({ ...m, primary: m.id === id })));
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
-      <div className="min-w-0 space-y-6">
-        {banner && (
-          <div className="rounded-xl border border-brand-50 bg-brand-50 px-4 py-3 text-sm font-medium text-brand">
-            {banner}
-          </div>
-        )}
-        {error && (
-          <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600" role="alert">
-            {error}
-          </div>
-        )}
+    <div className="space-y-6">
+      {banner && (
+        <div className="flex items-center gap-2 rounded-xl border border-brand-50 bg-brand-50 px-4 py-3 text-sm font-medium text-brand">
+          <CheckIcon size={16} /> {banner}
+        </div>
+      )}
+      {error && (
+        <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600" role="alert">
+          {error}
+        </div>
+      )}
 
-        {nextDue && (
-          <Card className="flex flex-col gap-4 bg-brand p-5 text-white sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-white/80">Next payment due</p>
-              <p className="text-2xl font-bold">{formatCedi(nextDue.amount)}</p>
-              <p className="text-sm text-white/80">{nextDue.description} · due {nextDue.date}</p>
-            </div>
-            <Button
-              className="bg-white text-brand hover:bg-white/90"
-              onClick={() => pay(nextDue)}
-              disabled={payingId === nextDue.id}
-            >
-              {payingId === nextDue.id ? 'Processing…' : 'Pay now'}
-            </Button>
-          </Card>
-        )}
-
-        <Card className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-left">
-            <thead>
-              <tr className="border-b border-gray-100 text-xs font-semibold uppercase tracking-wide text-muted">
-                <th className="px-5 py-3 font-semibold">Description</th>
-                <th className="px-5 py-3 font-semibold">Date</th>
-                <th className="px-5 py-3 font-semibold">Method</th>
-                <th className="px-5 py-3 font-semibold">Amount</th>
-                <th className="px-5 py-3 font-semibold">Status</th>
-                <th className="px-5 py-3 font-semibold" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {payments.map((p) => (
-                <tr key={p.id}>
-                  <td className="px-5 py-4">
-                    <span className="font-medium text-ink">{p.description}</span>
-                    <span className="block text-xs text-muted">{p.property}</span>
-                  </td>
-                  <td className="px-5 py-4 text-muted">{p.date}</td>
-                  <td className="px-5 py-4 text-muted">{p.method}</td>
-                  <td className="px-5 py-4 font-semibold text-ink">{formatCedi(p.amount)}</td>
-                  <td className="px-5 py-4">
-                    <Badge tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Badge>
-                  </td>
-                  <td className="px-5 py-4 text-right">
-                    {p.status === 'due' && (
-                      <Button size="sm" onClick={() => pay(p)} disabled={payingId === p.id}>
-                        {payingId === p.id ? 'Processing…' : 'Pay'}
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard
+          label="Paid to date"
+          value={formatCedi(totals.paid)}
+          hint={`${counts.paid} payment${counts.paid === 1 ? '' : 's'} settled`}
+          icon={<CheckIcon size={18} />}
+          chip="bg-brand-50 text-brand"
+        />
+        <StatCard
+          label="Due now"
+          value={formatCedi(totals.due)}
+          hint={counts.due > 0 ? `${counts.due} payment${counts.due === 1 ? '' : 's'} awaiting you` : 'Nothing due — nice'}
+          icon={<ClockIcon size={18} />}
+          chip="bg-amber-50 text-amber-600"
+        />
+        <StatCard
+          label="Upcoming"
+          value={formatCedi(totals.upcoming)}
+          hint={`${counts.upcoming} scheduled payment${counts.upcoming === 1 ? '' : 's'}`}
+          icon={<CalendarIcon size={18} />}
+          chip="bg-gray-100 text-gray-500"
+        />
       </div>
 
-      <Card className="h-fit p-5">
-        <h2 className="mb-3 font-bold text-ink">Payment methods</h2>
-        <div className="space-y-2">
-          {methods.map((m) => (
-            <div key={m.id} className="flex items-center gap-3 rounded-lg border border-gray-100 px-3 py-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand">
-                <CardIcon size={16} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-ink">{m.provider}</span>
-                <span className="block text-xs text-muted">{m.number}</span>
-              </span>
-              {m.primary ? (
-                <Badge tone="green">Primary</Badge>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setPrimary(m.id)}
-                  className="text-xs font-semibold text-brand hover:underline"
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="min-w-0 space-y-6">
+          {nextDue && (
+            <Card className="relative overflow-hidden bg-gradient-to-br from-brand to-emerald-900 p-6 text-white">
+              <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/5" />
+              <div className="pointer-events-none absolute -bottom-14 right-16 h-32 w-32 rounded-full bg-white/5" />
+              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-white/70">Next payment due</p>
+                  <p className="mt-1 text-3xl font-bold">{formatCedi(nextDue.amount)}</p>
+                  <p className="mt-1 text-sm text-white/70">
+                    {nextDue.description} · due {nextDue.date}
+                  </p>
+                  {primary && (
+                    <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/90">
+                      <CardIcon size={13} /> Pays with {primary.provider} {primary.number}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  className="shrink-0 bg-white text-brand hover:bg-white/90"
+                  onClick={() => pay(nextDue)}
+                  disabled={payingId === nextDue.id}
                 >
-                  Set primary
-                </button>
-              )}
+                  {payingId === nextDue.id ? 'Processing…' : 'Pay now'}
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          <Card>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
+              <h2 className="font-bold text-ink">Payment history</h2>
+              <div className="flex gap-1.5">
+                {FILTERS.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setFilter(f.id)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      filter === f.id
+                        ? 'bg-ink text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {f.label}
+                    <span className={`ml-1 ${filter === f.id ? 'text-white/60' : 'text-gray-400'}`}>
+                      {counts[f.id]}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-          ))}
-          <AddMethodForm onAdd={addMethod} />
+
+            {visible.length === 0 ? (
+              <p className="px-5 py-10 text-center text-sm text-muted">
+                No {filter === 'all' ? '' : `${STATUS[filter as PaymentStatus].label.toLowerCase()} `}payments to show.
+              </p>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {visible.map((p) => (
+                  <PaymentRow
+                    key={p.id}
+                    payment={p}
+                    paying={payingId === p.id}
+                    onPay={pay}
+                    onDownload={download}
+                  />
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
-      </Card>
+
+        <div className="space-y-6">
+          <Card className="h-fit p-5">
+            <h2 className="mb-3 font-bold text-ink">Payment methods</h2>
+            <div className="space-y-2">
+              {methods.map((m) => (
+                <MethodRow key={m.id} method={m} onSetPrimary={setPrimary} />
+              ))}
+              <AddMethodForm onAdd={addMethod} />
+            </div>
+          </Card>
+
+          <Card className="flex items-start gap-3 border-brand-50 bg-brand-50/60 p-4">
+            <span className="mt-0.5 shrink-0 text-brand">
+              <ShieldIcon size={18} />
+            </span>
+            <p className="text-xs leading-relaxed text-ink/80">
+              Payments are processed securely by Paystack and held in escrow until your stay is
+              confirmed. TripNest never stores your card or wallet details.
+            </p>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
@@ -231,7 +456,10 @@ export default function PaymentsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-3xl font-bold text-ink">Payments</h1>
+      <h1 className="text-3xl font-bold text-ink">Payments</h1>
+      <p className="mb-6 mt-1 text-sm text-muted">
+        Track rent and deposits, settle what's due, and manage how you pay.
+      </p>
       <AsyncBoundary state={paymentsState} loadingMessage="Loading payments…" errorMessage="Failed to load payments.">
         {(payments) => (
           <AsyncBoundary state={methodsState} loadingMessage="Loading payments…" errorMessage="Failed to load methods.">

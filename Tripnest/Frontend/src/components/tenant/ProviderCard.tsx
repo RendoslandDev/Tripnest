@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ServiceProvider } from '../../types';
 import { formatCedi } from '../../lib/format';
@@ -10,16 +9,12 @@ import { ShieldIcon, StarIcon, MapPinIcon } from './icons';
 
 export default function ProviderCard({ provider }: { provider: ServiceProvider }) {
   const navigate = useNavigate();
-  const [requested, setRequested] = useState(false);
 
-  const request = () => {
-    setRequested(true);
-    // Hand off to messaging so the tenant can chat with the provider.
-    setTimeout(() => navigate('/messages'), 600);
-  };
+  // Requests and chat live on the provider's profile page.
+  const open = () => navigate(`/providers/${provider.id}`);
 
   return (
-    <Card className="flex flex-col p-5">
+    <Card className="flex cursor-pointer flex-col p-5 transition-shadow hover:shadow-md" onClick={open}>
       <div className="flex items-center gap-3">
         <Avatar name={provider.name} size={48} />
         <div className="min-w-0 flex-1">
@@ -64,8 +59,8 @@ export default function ProviderCard({ provider }: { provider: ServiceProvider }
             </>
           )}
         </span>
-        <Button size="sm" onClick={request} disabled={requested}>
-          {requested ? 'Requested ✓' : 'Request'}
+        <Button size="sm" onClick={(e) => { e.stopPropagation(); open(); }}>
+          Request
         </Button>
       </div>
     </Card>

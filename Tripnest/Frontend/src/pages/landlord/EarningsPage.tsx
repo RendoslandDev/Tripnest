@@ -49,7 +49,7 @@ function Earnings({ data }: { data: EarningsSummary }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-ink">Earnings</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-ink">Earnings</h1>
         <p className="mt-1 text-muted">Track payouts and settled bookings across your portfolio.</p>
       </div>
 
@@ -103,11 +103,11 @@ function Earnings({ data }: { data: EarningsSummary }) {
         </Card>
 
         <aside className="space-y-5">
-          <Card className="bg-brand p-5 text-white">
-            <p className="text-sm text-white/80">Available to withdraw</p>
+          <Card className="border-ink bg-ink p-5 text-white">
+            <p className="text-sm text-white/70">Available to withdraw</p>
             <p className="mt-1 text-3xl font-bold">{formatCedi(available)}</p>
             <Button
-              className="mt-4 w-full bg-white text-brand hover:bg-white/90"
+              className="mt-4 w-full rounded-xl bg-white text-ink hover:bg-white/90"
               onClick={withdraw}
               disabled={available <= 0 || withdrawing}
             >
@@ -117,7 +117,7 @@ function Earnings({ data }: { data: EarningsSummary }) {
 
           <Card className="p-5">
             <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-ink">
                 <ClockIcon size={18} />
               </span>
               <div>
@@ -131,7 +131,7 @@ function Earnings({ data }: { data: EarningsSummary }) {
 
           <Card className="p-5">
             <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-ink">
                 <CardIcon size={18} />
               </span>
               <p className="text-sm font-semibold text-ink">Payout method</p>

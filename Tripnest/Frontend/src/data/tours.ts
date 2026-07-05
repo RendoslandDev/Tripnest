@@ -1,11 +1,14 @@
-import type { HotspotCategory, Property, PropertyTour, TourHotspot, TourRoom } from '../types';
+import type {
+  HotspotCategory, Property, PropertyTour, TourFullVideo, TourHotspot, TourRoom, TourVideo,
+} from '../types';
 
 // ---------------------------------------------------------------------------
 // Per-property virtual tours. Rather than hand-author a scene list for every
 // listing, we derive a realistic walkthrough from each property's attributes
-// (rooms, baths, type, amenities). Tailor or override a specific listing via
-// TOUR_OVERRIDES. Each room is a styled placeholder scene today; drop a real
-// photo/video URL onto `media` to swap it in with no other changes.
+// (rooms, baths, type, amenities). Real walkthrough media (per-room clips and
+// a continuous full video, generated from listing photos via Google Flow) is
+// layered on top through TOUR_MEDIA; rooms without a ready clip fall back to
+// a still image, then to the styled gradient scene.
 // ---------------------------------------------------------------------------
 
 // Scene gradient palettes per area, tuned for a warm, welcoming feel.
@@ -230,16 +233,82 @@ function buildRooms(property: Property): TourRoom[] {
   return rooms;
 }
 
-/** Listing-specific overrides keyed by property id (none yet — derived tours). */
-const TOUR_OVERRIDES: Record<string, PropertyTour> = {};
+// ---------------------------------------------------------------------------
+// Walkthrough media overlay. Clips are keyed by room id so demo properties
+// keep their derived rooms/hotspots and only gain media. The sample MP4s are
+// stand-ins for Google Flow (Veo) output until real footage is generated.
+// ---------------------------------------------------------------------------
 
-/** Build (or look up) the virtual tour for a property. */
+const SAMPLE_BUCKET = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample';
+
+function flowClip(file: string, durationSec: number): TourVideo {
+  return {
+    url: `${SAMPLE_BUCKET}/${file}`,
+    durationSec,
+    status: 'ready',
+    provider: 'google-flow',
+    sourcePhotos: [],
+    generatedAt: '2026-06-28T10:00:00Z',
+  };
+}
+
+interface TourMedia {
+  clips?: Record<string, TourVideo>; // keyed by room id
+  fullVideo?: TourFullVideo;
+}
+
+const TOUR_MEDIA: Record<string, TourMedia> = {
+  '38492-PROP': {
+    clips: {
+      entrance: flowClip('ForBiggerBlazes.mp4', 15),
+      living: flowClip('ForBiggerEscapes.mp4', 15),
+      kitchen: flowClip('ForBiggerFun.mp4', 60),
+      'bedroom-1': flowClip('ForBiggerJoyrides.mp4', 15),
+      'bathroom-1': flowClip('ForBiggerMeltdowns.mp4', 15),
+    },
+    fullVideo: {
+      ...flowClip('BigBuckBunny.mp4', 596),
+      chapters: [
+        { roomId: 'entrance', startSec: 0 },
+        { roomId: 'living', startSec: 60 },
+        { roomId: 'kitchen', startSec: 150 },
+        { roomId: 'bedroom-1', startSec: 260 },
+        { roomId: 'bathroom-1', startSec: 380 },
+        { roomId: 'exterior', startSec: 480 },
+      ],
+    },
+  },
+  '40110-PROP': {
+    clips: {
+      entrance: flowClip('ForBiggerEscapes.mp4', 15),
+      living: flowClip('ForBiggerJoyrides.mp4', 15),
+      'bedroom-1': flowClip('ForBiggerBlazes.mp4', 15),
+    },
+  },
+};
+
+/**
+ * Build the virtual tour for a property, layering on any walkthrough media.
+ * Uploaded listing photos become room stills, each carrying a pending
+ * google-flow clip whose sourcePhotos record what the video will be
+ * generated from; a ready clip from TOUR_MEDIA always wins.
+ */
 export function buildTour(property: Property): PropertyTour {
-  const override = TOUR_OVERRIDES[property.id];
-  if (override) return override;
+  const media = TOUR_MEDIA[property.id];
+  const photos = property.photos ?? [];
+  const rooms = buildRooms(property).map((room, i) => {
+    const photo: string | undefined = photos[i];
+    const clip =
+      media?.clips?.[room.id] ??
+      (photo
+        ? ({ status: 'pending', provider: 'google-flow', sourcePhotos: [photo] } satisfies TourVideo)
+        : undefined);
+    return { ...room, image: photo, clip };
+  });
   return {
     propertyId: property.id,
     title: property.title,
-    rooms: buildRooms(property),
+    rooms,
+    fullVideo: media?.fullVideo,
   };
 }
