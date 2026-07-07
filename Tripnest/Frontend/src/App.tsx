@@ -9,6 +9,7 @@ import LandlordHome from './pages/landlord/LandlordHome';
 import EarningsPage from './pages/landlord/EarningsPage';
 import LandlordListingsPage from './pages/landlord/ListingsPage';
 import InquiriesPage from './pages/landlord/InquiriesPage';
+import LandlordMessagesPage from './pages/landlord/MessagesPage';
 import LandlordBookingsPage from './pages/landlord/BookingsPage';
 import TenantsPage from './pages/landlord/TenantsPage';
 import ReviewsPage from './pages/landlord/ReviewsPage';
@@ -118,6 +119,7 @@ export default function App() {
               <Route key={item.path} path={item.path.slice(1)} element={element} />
             );
           })}
+          <Route path="messages/:conversationId" element={<RequireAuth><MessagesPage /></RequireAuth>} />
           <Route path="property/:id" element={<PropertyDetailPage />} />
           <Route path="providers/:id" element={<ProviderDetailPage />} />
           <Route path="checkout/:id" element={<RequireAuth><CheckoutPage /></RequireAuth>} />
@@ -132,6 +134,8 @@ export default function App() {
           <Route path="pricing" element={<PricingPage />} />
           <Route path="statements" element={<StatementsPage />} />
           <Route path="listings" element={<LandlordListingsPage />} />
+          <Route path="messages" element={<LandlordMessagesPage />} />
+          <Route path="messages/:conversationId" element={<LandlordMessagesPage />} />
           <Route path="inquiries" element={<InquiriesPage />} />
           <Route path="bookings" element={<LandlordBookingsPage />} />
           <Route path="earnings" element={<EarningsPage />} />

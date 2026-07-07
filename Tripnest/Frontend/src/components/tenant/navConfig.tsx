@@ -31,7 +31,7 @@ export const TENANT_NAV: TenantNavGroup[] = [
       { label: 'Nearby', path: '/nearby', icon: <MapPinIcon /> },
       { label: 'Saved Listings', path: '/saved', icon: <HeartIcon /> },
       { label: 'Bookings', path: '/bookings', icon: <CalendarIcon /> },
-      { label: 'Messages', path: '/messages', icon: <MessageIcon />, badge: 3 },
+      { label: 'Messages', path: '/messages', icon: <MessageIcon /> },
       { label: 'Agreements', path: '/agreements', icon: <FileIcon /> },
       { label: 'Payments', path: '/payments', icon: <CardIcon /> },
       { label: 'Notifications', path: '/notifications', icon: <BellIcon />, badge: 6 },

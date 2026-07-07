@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import {
   HomeIcon, KeyIcon, MessageIcon, CalendarIcon, CardIcon, UsersIcon, StarIcon,
-  SettingsIcon, HelpIcon, CheckIcon, BadgeIcon, FileIcon, ClockIcon,
+  SettingsIcon, HelpIcon, CheckIcon, BadgeIcon, FileIcon, ClockIcon, ChatIcon,
 } from '../tenant/icons';
 
 export interface LandlordNavItem {
@@ -32,6 +32,7 @@ export const LANDLORD_NAV: LandlordNavGroup[] = [
     heading: 'Manage',
     items: [
       { label: 'My Listings', path: '/landlord/listings', icon: <KeyIcon /> },
+      { label: 'Messages', path: '/landlord/messages', icon: <ChatIcon /> },
       { label: 'Inquiries', path: '/landlord/inquiries', icon: <MessageIcon /> },
       { label: 'Bookings', path: '/landlord/bookings', icon: <ClockIcon /> },
       { label: 'Earnings', path: '/landlord/earnings', icon: <CardIcon /> },

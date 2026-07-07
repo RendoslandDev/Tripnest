@@ -49,7 +49,7 @@ const SOCIALS = [
 const PROVIDERS = ['MTN MoMo', 'Telecel Cash', 'AirtelTigo', 'Visa · Mastercard'];
 
 function FooterLink({ label, to }: { label: string; to: string }) {
-  const cls = 'text-sm text-white/60 no-underline transition-colors hover:text-white';
+  const cls = 'text-sm text-black no-underline transition-colors hover:text-black';
   return to.startsWith('#') ? (
     <a href={to} className={cls}>{label}</a>
   ) : (
@@ -59,7 +59,7 @@ function FooterLink({ label, to }: { label: string; to: string }) {
 
 export default function Footer() {
   return (
-    <footer className="bg-ink text-white">
+    <footer className="bg-white text-black">
       {/* Brand accent line */}
       <div aria-hidden className="h-1 bg-gradient-to-r from-brand via-emerald-400 to-brand" />
 
@@ -68,7 +68,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 gap-10 py-12 md:grid-cols-12">
           <div className="md:col-span-5 lg:col-span-4">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-emerald-500 text-white">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-emerald-500 text-black">
                 <HexIcon size={20} />
               </span>
               <span>
@@ -78,7 +78,7 @@ export default function Footer() {
                 </span>
               </span>
             </div>
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-black">
               Verified homes across Ghana with identity-checked hosts and escrow-protected
               payments — from one night to a whole year.
             </p>
@@ -88,7 +88,7 @@ export default function Footer() {
                   key={s.label}
                   href="#"
                   aria-label={s.label}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-white/70 transition-colors hover:border-emerald-400 hover:text-emerald-300"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-black text-black transition-colors hover:border-emerald-400 hover:text-emerald-300"
                 >
                   {s.icon}
                 </a>
@@ -99,7 +99,7 @@ export default function Footer() {
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 md:col-span-7 lg:col-span-8">
             {COLUMNS.map((col) => (
               <div key={col.heading}>
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-white/40">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-black">
                   {col.heading}
                 </h3>
                 <ul className="space-y-2.5">
@@ -115,19 +115,19 @@ export default function Footer() {
         </div>
 
         {/* Trust strip */}
-        <div className="flex flex-col gap-4 border-t border-white/10 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 border-t border-black py-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-sm text-white/50">We accept</span>
+            <span className="mr-1 text-sm text-black">We accept</span>
             {PROVIDERS.map((p) => (
               <span
                 key={p}
-                className="rounded-full border border-white/15 px-3 py-1 text-xs font-semibold text-white/80"
+                className="rounded-full border border-black px-3 py-1 text-xs font-semibold text-white/200"
               >
                 {p}
               </span>
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/50">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-black">
             <span className="flex items-center gap-1.5">
               <ShieldIcon size={14} className="text-emerald-300" /> Escrow-protected payments
             </span>
@@ -138,11 +138,11 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="flex flex-col gap-2 border-t border-white/10 py-5 text-sm text-white/40 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-t border-black py-5 text-sm text-black sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} TripNest. All rights reserved.</p>
           <p>
             Built for renters and hosts across{' '}
-            <span className="font-semibold text-white/70">18+ Ghanaian cities</span>.
+            <span className="font-semibold text-black">18+ Ghanaian cities</span>.
           </p>
         </div>
       </div>

@@ -4,6 +4,7 @@ import type { Property, ServiceProvider } from '../../types';
 import { getProviderById, requestAgentViewing, requestCaretakerService } from '../../api/services';
 import { getProperties } from '../../api/properties';
 import { startConversation } from '../../api/messages';
+import { rememberContact } from '../../lib/chatContacts';
 import { useSession } from '../../store/authStore';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
@@ -16,6 +17,48 @@ import { MapPinIcon, MessageIcon, ShieldIcon, StarIcon } from '../../components/
 
 const inputCls =
   'w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand';
+
+const CATEGORY_ROLE: Record<string, string> = {
+  Agents: 'Agent',
+  Caretakers: 'Caretaker',
+  'House Help': 'House help',
+};
+
+/** "Message now" follow-up shown once a request has been sent. Live providers only. */
+function ChatNowButton({ provider }: { provider: ServiceProvider }) {
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!provider.userId) return null;
+
+  const open = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      rememberContact(provider.userId!, provider.name, CATEGORY_ROLE[provider.category]);
+      const conversationId = await startConversation(provider.userId!);
+      navigate(`/messages/${conversationId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not open a conversation.');
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={() => void open()}
+        disabled={busy}
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand py-2 text-sm font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-60"
+      >
+        <MessageIcon size={15} /> {busy ? 'Opening chat…' : 'Message now'}
+      </button>
+      {error && <p className="mt-1.5 text-xs text-rose-600">{error}</p>}
+    </div>
+  );
+}
 
 function RequestServiceForm({ provider }: { provider: ServiceProvider }) {
   const navigate = useNavigate();
@@ -55,6 +98,7 @@ function RequestServiceForm({ provider }: { provider: ServiceProvider }) {
         <p className="mt-1">
           {provider.name} has been notified and can message you to arrange the details.
         </p>
+        <ChatNowButton provider={provider} />
       </div>
     );
   }
@@ -125,6 +169,7 @@ function RequestViewingForm({ provider }: { provider: ServiceProvider }) {
       <div className="rounded-xl bg-brand-50 p-4 text-sm text-brand">
         <p className="font-semibold">Viewing requested ✓</p>
         <p className="mt-1">The agent will confirm the time and can message you here on TripNest.</p>
+        <ChatNowButton provider={provider} />
       </div>
     );
   }
@@ -180,8 +225,9 @@ function Detail({ provider }: { provider: ServiceProvider }) {
     setChatBusy(true);
     setChatError(null);
     try {
-      await startConversation(provider.userId);
-      navigate('/messages');
+      rememberContact(provider.userId, provider.name, CATEGORY_ROLE[provider.category]);
+      const conversationId = await startConversation(provider.userId);
+      navigate(`/messages/${conversationId}`);
     } catch (err) {
       setChatError(err instanceof Error ? err.message : 'Could not open a conversation.');
       setChatBusy(false);

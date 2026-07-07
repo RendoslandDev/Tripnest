@@ -329,6 +329,7 @@ export function mapMaintenance(dto: MaintenanceResponseDto, property?: Property)
     id: dto.maintenanceId,
     title: dto.description,
     property: property?.title ?? 'My residence',
+    propertyId: dto.propertyId,
     category: 'General',
     status: MAINTENANCE_STATUS[dto.status] ?? 'pending',
     reportedOn: formatIsoDate(dto.createdAt),

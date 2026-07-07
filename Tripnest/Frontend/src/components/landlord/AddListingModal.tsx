@@ -18,7 +18,10 @@ interface PickedPhoto {
   preview: string; // object URL, revoked on removal/unmount
 }
 
-export default function AddListingModal({ onCreated }: { onCreated: (listing: Listing) => void }) {
+export default function AddListingModal({ onCreated, triggerLabel = '+ Add listing' }: {
+  onCreated: (listing: Listing) => void;
+  triggerLabel?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,7 +128,7 @@ export default function AddListingModal({ onCreated }: { onCreated: (listing: Li
   if (!open) {
     return (
       <Button variant="dark" onClick={() => setOpen(true)}>
-        + Add listing
+        {triggerLabel}
       </Button>
     );
   }

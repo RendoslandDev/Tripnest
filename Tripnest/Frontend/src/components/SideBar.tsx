@@ -96,7 +96,7 @@ const BOTTOM_NAV: NavItem[] = [
 const baseItem =
   'flex w-full items-center gap-3 rounded-[10px] px-3.5 py-3 text-[15px] font-medium no-underline transition-colors';
 const inactiveItem = 'text-gray-600 hover:bg-slate-100 hover:text-gray-900';
-const activeItem = 'bg-white font-semibold text-gray-900 shadow-[0_1px_2px_rgba(0,0,0,0.06),0_1px_8px_rgba(0,0,0,0.04)]';
+const activeItem = 'bg-white border border-gray-400 font-semibold text-gray-900 shadow-[0_1px_2px_rgba(0,0,0,0.06),0_1px_8px_rgba(0,0,0,0.04)]';
 
 interface SidebarProps {
   open: boolean;
@@ -144,7 +144,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         </div>
 
         <NavList items={PRIMARY_NAV} onNavigate={onClose} />
-        <div className="my-5 h-px bg-gray-200" />
+        <div className="my-5 h-px bg-gray-200 " />
         <NavList items={SECONDARY_NAV} onNavigate={onClose} />
 
         <div className="mt-auto">

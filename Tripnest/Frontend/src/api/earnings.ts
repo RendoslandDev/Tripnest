@@ -10,6 +10,7 @@ export async function getEarnings(): Promise<EarningsSummary> {
     available: dto.totalEarnings,
     pending: 0,
     thisMonth: dto.thisMonthEarnings,
+    lastMonth: dto.lastMonthEarnings,
     lifetime: dto.totalEarnings,
     nextPayoutDate: '—',
     transactions: [],

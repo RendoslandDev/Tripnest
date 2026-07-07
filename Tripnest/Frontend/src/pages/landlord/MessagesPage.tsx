@@ -7,10 +7,10 @@ export default function MessagesPage() {
   const state = useAsync(getConversations, []);
 
   return (
-    <div className="flex h-[calc(100dvh-8.5rem)] min-h-[480px] flex-col sm:h-[calc(100dvh-9.5rem)]">
+    <div className="flex h-[calc(100dvh-8.5rem)] min-h-[480px] flex-col sm:h-[calc(100dvh-10.5rem)]">
       <header className="mb-4">
         <h1 className="mb-1 text-3xl font-bold text-ink">Messages</h1>
-        <p className="text-muted">Chat with agents, caretakers and support in real time.</p>
+        <p className="text-muted">Chat with tenants and applicants about your listings.</p>
       </header>
       <AsyncBoundary
         state={state}
@@ -19,7 +19,7 @@ export default function MessagesPage() {
         emptyMessage="No conversations yet."
         isEmpty={(r) => r.length === 0}
       >
-        {(r) => <MessagesShell conversations={r} basePath="/messages" />}
+        {(r) => <MessagesShell conversations={r} basePath="/landlord/messages" />}
       </AsyncBoundary>
     </div>
   );

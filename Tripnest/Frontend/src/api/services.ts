@@ -96,6 +96,28 @@ function mapCaretaker(dto: CaretakerDto): ServiceProvider {
   };
 }
 
+/** userId → directory display name/role for live agents and caretakers. */
+export async function getProviderDirectory(): Promise<Record<string, { name: string; role: string }>> {
+  const [agents, caretakers] = await Promise.all([
+    apiGet<AgentDto[]>('/api/agents').catch(() => [] as AgentDto[]),
+    apiGet<CaretakerDto[]>('/api/caretakers').catch(() => [] as CaretakerDto[]),
+  ]);
+  const map: Record<string, { name: string; role: string }> = {};
+  for (const a of agents) map[a.userId] = { name: `Verified Agent · ${a.licenseNumber}`, role: 'Agent' };
+  for (const c of caretakers) map[c.userId] = { name: 'Property Caretaker', role: 'Caretaker' };
+  return map;
+}
+
+/** propertyId → caretaker userId, for "chat about this property" flows. */
+export async function getCaretakersByProperty(): Promise<Record<string, string>> {
+  try {
+    const dtos = await apiGet<CaretakerDto[]>('/api/caretakers');
+    return Object.fromEntries(dtos.map((c) => [c.propertyId, c.userId]));
+  } catch {
+    return {};
+  }
+}
+
 async function liveProviders(category: string): Promise<ServiceProvider[]> {
   try {
     if (category === 'Agents') {

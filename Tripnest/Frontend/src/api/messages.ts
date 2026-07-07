@@ -10,19 +10,30 @@ import {
   type PagedResultDto,
 } from './backend';
 import { getPropertyById } from './properties';
+import { getProviderDirectory } from './services';
+import { getContact } from '../lib/chatContacts';
 
 /**
  * Conversations for the signed-in user, enriched client-side because the
  * DTO carries ids only: property-linked chats are named after the property,
- * and the newest message (API pages newest-first) supplies the sidebar
- * preview, timestamp and unread flag. Enrichment is best-effort — on any
- * failure the bare conversation still renders.
+ * direct chats after the locally-known contact or the public provider
+ * directory, and the newest message (API pages newest-first) supplies the
+ * sidebar preview, timestamp and unread flag. Enrichment is best-effort —
+ * on any failure the bare conversation still renders.
  */
 export async function getConversations(): Promise<Conversation[]> {
   const me = getSession()?.userId ?? '';
   const dtos = await apiGet<ConversationResponseDto[]>('/api/chat/conversations/mine');
+  // Only direct (non-property) chats need the agents/caretakers directory.
+  const directory = dtos.some((d) => !d.propertyId) ? await getProviderDirectory() : {};
   return Promise.all(dtos.map(async (dto) => {
     const conversation = mapConversation(dto, me);
+    const otherId = dto.user1Id === me ? dto.user2Id : dto.user1Id;
+    const known = getContact(otherId) ?? directory[otherId];
+    if (known) {
+      conversation.name = known.name;
+      if (known.role) conversation.role = known.role;
+    }
     try {
       const [latest, property] = await Promise.all([
         apiGet<PagedResultDto<MessageResponseDto>>(
@@ -30,7 +41,8 @@ export async function getConversations(): Promise<Conversation[]> {
         ).then((p) => p.items[0]),
         dto.propertyId ? getPropertyById(dto.propertyId) : Promise.resolve(undefined),
       ]);
-      if (property) conversation.name = property.title;
+      // A known person beats the property title; the title fills the gap otherwise.
+      if (property && !known) conversation.name = property.title;
       if (latest) {
         conversation.lastMessage = latest.content;
         conversation.time = timeAgo(latest.createdAt);

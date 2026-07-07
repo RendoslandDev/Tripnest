@@ -185,6 +185,8 @@ export interface MaintenanceTicket {
   id: string | number;
   title: string;
   property: string;
+  /** Backing property id — lets the ticket open a caretaker chat. */
+  propertyId?: string;
   category: string;
   status: MaintenanceStatus;
   reportedOn: string;
@@ -278,6 +280,7 @@ export interface EarningsSummary {
   available: number;
   pending: number;
   thisMonth: number;
+  lastMonth: number;
   lifetime: number;
   nextPayoutDate: string;
   transactions: EarningTxn[];

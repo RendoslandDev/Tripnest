@@ -6,6 +6,7 @@ export const earnings: EarningsSummary = {
   available: 4820,
   pending: 1340,
   thisMonth: 6160,
+  lastMonth: 5480,
   lifetime: 48750,
   nextPayoutDate: 'Jul 1, 2025',
   transactions: [
