@@ -1,6 +1,6 @@
 import type { Listing } from '../types';
 import { apiGet, apiPost, apiPut, apiUpload } from './client';
-import { mapListing, type PropertyResponseDto } from './backend';
+import { mapListing, type ListingCopySuggestionDto, type PropertyResponseDto } from './backend';
 
 export async function getListings(): Promise<Listing[]> {
   const dtos = await apiGet<PropertyResponseDto[]>('/api/properties/user/my-properties');
@@ -55,6 +55,17 @@ export async function updateListing(
     amenities: input.amenities || null,
   });
   return mapListing(dto);
+}
+
+export type ListingCopySuggestion = ListingCopySuggestionDto;
+
+/**
+ * AI-drafted title/description/highlights from the listing's facts and photos
+ * (owner only; the property must already have photos). Advisory — the host
+ * reviews and applies the copy manually.
+ */
+export function generateListingCopy(propertyId: string): Promise<ListingCopySuggestion> {
+  return apiPost<ListingCopySuggestionDto>(`/api/properties/${propertyId}/generate-copy`);
 }
 
 /**

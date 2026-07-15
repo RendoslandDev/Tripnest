@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUpIcon, MicIcon, PaperclipIcon, TrashIcon } from '../tenant/icons';
+import { aiErrorMessage } from '../../api/assistant';
+import { ArrowUpIcon, MicIcon, PaperclipIcon, SparkleIcon, TrashIcon } from '../tenant/icons';
 import { clock } from './VoicePlayer';
 
 interface ComposerProps {
@@ -9,13 +10,17 @@ interface ComposerProps {
   onAttach: (file: File) => void;
   /** Surface transient problems (unsupported recording, mic denied…). */
   onNotice: (message: string) => void;
+  /** When provided, an AI button fills the draft with a suggested reply to edit. */
+  suggest?: () => Promise<string>;
 }
 
 /** Message composer: text draft, file attach, and voice-note recording. */
-export default function Composer({ onSendText, onSendVoice, onAttach, onNotice }: ComposerProps) {
+export default function Composer({ onSendText, onSendVoice, onAttach, onNotice, suggest }: ComposerProps) {
   const [draft, setDraft] = useState('');
   const [recording, setRecording] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -44,6 +49,20 @@ export default function Composer({ onSendText, onSendVoice, onAttach, onNotice }
     const file = e.target.files?.[0];
     if (file) onAttach(file);
     e.target.value = '';
+  };
+
+  // Fill the draft with an AI suggestion for the user to edit — never auto-sent.
+  const runSuggest = async () => {
+    if (!suggest || suggesting) return;
+    setSuggesting(true);
+    try {
+      setDraft(await suggest());
+      inputRef.current?.focus();
+    } catch (err) {
+      onNotice(aiErrorMessage(err));
+    } finally {
+      setSuggesting(false);
+    }
   };
 
   // Stop the recorder; `discard` decides whether the clip is sent or dropped.
@@ -119,6 +138,7 @@ export default function Composer({ onSendText, onSendVoice, onAttach, onNotice }
         ) : (
           <>
             <input
+              ref={inputRef}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void send(); }}
@@ -126,14 +146,28 @@ export default function Composer({ onSendText, onSendVoice, onAttach, onNotice }
               className="w-full bg-transparent px-1 py-1.5 text-sm text-ink outline-none placeholder:text-muted"
             />
             <div className="mt-1 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                aria-label="Attach a file"
-                className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-gray-100 hover:text-ink"
-              >
-                <PaperclipIcon size={17} />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  aria-label="Attach a file"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-gray-100 hover:text-ink"
+                >
+                  <PaperclipIcon size={17} />
+                </button>
+                {suggest && (
+                  <button
+                    type="button"
+                    onClick={() => void runSuggest()}
+                    disabled={suggesting || Boolean(draft.trim())}
+                    aria-label="Suggest a reply"
+                    title={draft.trim() ? 'Clear your draft to get a suggestion' : 'Suggest a reply'}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-gray-100 hover:text-brand disabled:pointer-events-none disabled:opacity-40"
+                  >
+                    <SparkleIcon size={17} className={suggesting ? 'animate-pulse text-brand' : undefined} />
+                  </button>
+                )}
+              </div>
               <input ref={fileRef} type="file" className="hidden" onChange={attach} />
 
               <div className="flex items-center gap-1.5">

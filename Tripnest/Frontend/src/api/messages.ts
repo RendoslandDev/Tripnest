@@ -8,6 +8,7 @@ import {
   type ConversationResponseDto,
   type MessageResponseDto,
   type PagedResultDto,
+  type SuggestedReplyResponseDto,
 } from './backend';
 import { getPropertyById } from './properties';
 import { getProviderDirectory } from './services';
@@ -78,6 +79,14 @@ export async function sendMessage(conversationId: string | number, body: string)
     { body },
   );
   return mapMessage(dto, me);
+}
+
+/** AI-drafted reply grounded in the listing and recent messages, for the user to edit. */
+export async function suggestReply(conversationId: string | number): Promise<string> {
+  const dto = await apiPost<SuggestedReplyResponseDto>(
+    `/api/chat/conversations/${conversationId}/suggest-reply`,
+  );
+  return dto.reply;
 }
 
 /** Clear the unread state server-side when a conversation is opened. */

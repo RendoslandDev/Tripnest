@@ -1,11 +1,11 @@
 import type { Inquiry, LandlordBooking, LandlordTenant, LandlordReview } from '../types';
 
 export const inquiries: Inquiry[] = [
-  { id: 1, guest: 'Ama Serwaa', listing: 'Sunlit Loft near Osu', message: 'Is the loft available from August? I’d need it for 6 months.', date: '2h ago', status: 'new' },
-  { id: 2, guest: 'Kojo Antwi', listing: 'Garden Studio, East Legon', message: 'Could I schedule a viewing this weekend?', date: '5h ago', status: 'new' },
-  { id: 3, guest: 'Efua Boateng', listing: 'Hillside Family House', message: 'Are utilities included in the monthly rent?', date: '1d ago', status: 'new' },
-  { id: 4, guest: 'Yaw Darko', listing: 'Sunlit Loft near Osu', message: 'Do you allow pets? I have a small dog.', date: '2d ago', status: 'replied' },
-  { id: 5, guest: 'Adwoa Nyarko', listing: 'Beachfront Cabana', message: 'Is the cabana available for a 2-week stay in September?', date: '3d ago', status: 'replied' },
+  { id: '1', guest: 'Ama Serwaa', listing: 'Sunlit Loft near Osu', message: 'Is the loft available from August? I’d need it for 6 months.', date: '2h ago', status: 'new' },
+  { id: '2', guest: 'Kojo Antwi', listing: 'Garden Studio, East Legon', message: 'Could I schedule a viewing this weekend?', date: '5h ago', status: 'new' },
+  { id: '3', guest: 'Efua Boateng', listing: 'Hillside Family House', message: 'Are utilities included in the monthly rent?', date: '1d ago', status: 'new' },
+  { id: '4', guest: 'Yaw Darko', listing: 'Sunlit Loft near Osu', message: 'Do you allow pets? I have a small dog.', date: '2d ago', status: 'replied' },
+  { id: '5', guest: 'Adwoa Nyarko', listing: 'Beachfront Cabana', message: 'Is the cabana available for a 2-week stay in September?', date: '3d ago', status: 'replied' },
 ];
 
 export const landlordBookings: LandlordBooking[] = [
@@ -25,9 +25,9 @@ export const landlordTenants: LandlordTenant[] = [
 ];
 
 export const landlordReviews: LandlordReview[] = [
-  { id: 1, guest: 'Yaw Darko', listing: 'Sunlit Loft near Osu', rating: 5, date: 'Jun 17, 2025', text: 'Spotless, great location and the host was super responsive. Would book again!' },
-  { id: 2, guest: 'Adwoa Nyarko', listing: 'Beachfront Cabana', rating: 4, date: 'Jun 11, 2025', text: 'Beautiful spot right on the beach. Water pressure could be better but overall lovely.', reply: 'Thanks Adwoa! We’ve since serviced the pump — hope to host you again.' },
-  { id: 3, guest: 'Kwame Asare', listing: 'Garden Studio, East Legon', rating: 5, date: 'Jun 2, 2025', text: 'Cosy, quiet and exactly as pictured. Check-in was seamless.' },
-  { id: 4, guest: 'Efua Boateng', listing: 'Hillside Family House', rating: 4, date: 'May 28, 2025', text: 'Spacious house, perfect for our family. A little far from town but worth it.' },
-  { id: 5, guest: 'Ama Serwaa', listing: 'Sunlit Loft near Osu', rating: 5, date: 'May 20, 2025', text: 'The SMS safety alerts gave me real peace of mind. Highly recommend this host.' },
+  { id: '1', guest: 'Yaw Darko', listing: 'Sunlit Loft near Osu', rating: 5, date: 'Jun 17, 2025', text: 'Spotless, great location and the host was super responsive. Would book again!' },
+  { id: '2', guest: 'Adwoa Nyarko', listing: 'Beachfront Cabana', rating: 4, date: 'Jun 11, 2025', text: 'Beautiful spot right on the beach. Water pressure could be better but overall lovely.', reply: 'Thanks Adwoa! We’ve since serviced the pump — hope to host you again.' },
+  { id: '3', guest: 'Kwame Asare', listing: 'Garden Studio, East Legon', rating: 5, date: 'Jun 2, 2025', text: 'Cosy, quiet and exactly as pictured. Check-in was seamless.' },
+  { id: '4', guest: 'Efua Boateng', listing: 'Hillside Family House', rating: 4, date: 'May 28, 2025', text: 'Spacious house, perfect for our family. A little far from town but worth it.' },
+  { id: '5', guest: 'Ama Serwaa', listing: 'Sunlit Loft near Osu', rating: 5, date: 'May 20, 2025', text: 'The SMS safety alerts gave me real peace of mind. Highly recommend this host.' },
 ];

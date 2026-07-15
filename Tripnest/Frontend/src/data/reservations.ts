@@ -4,7 +4,7 @@ import type { Reservation } from '../types';
 // Replace with API data once the backend is wired up.
 export const reservations: Reservation[] = [
   {
-    id: 1,
+    id: '1',
     property: 'Wander Ellijay Falls',
     location: 'Tarkwa, Ghana',
     status: 'upcoming',
@@ -21,7 +21,7 @@ export const reservations: Reservation[] = [
     reviews: [],
   },
   {
-    id: 2,
+    id: '2',
     property: 'Wander Ellijay Falls',
     location: 'Tarkwa, Ghana',
     status: 'complete',
@@ -38,7 +38,7 @@ export const reservations: Reservation[] = [
     reviews: [],
   },
   {
-    id: 3,
+    id: '3',
     property: 'Wander Ellijay Falls',
     location: 'Tarkwa, Ghana',
     status: 'complete',
@@ -55,7 +55,7 @@ export const reservations: Reservation[] = [
     reviews: [],
   },
   {
-    id: 4,
+    id: '4',
     property: 'Wander Ellijay Falls',
     location: 'Tarkwa, Ghana',
     status: 'complete',
@@ -72,7 +72,7 @@ export const reservations: Reservation[] = [
     reviews: [],
   },
   {
-    id: 5,
+    id: '5',
     property: 'Wander Ellijay Falls',
     location: 'Tarkwa, Ghana',
     status: 'canceled',

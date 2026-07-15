@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import type { Listing } from '../../types';
 import {
-  getListingProperty, updateListing, type NewListingInput,
+  generateListingCopy, getListingProperty, updateListing,
+  type ListingCopySuggestion, type NewListingInput,
 } from '../../api/listings';
+import { aiErrorMessage } from '../../api/assistant';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../AsyncBoundary';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import ListingFields from './ListingFormFields';
+import ListingCopySuggestionCard from './ListingCopySuggestionCard';
+import { SparkleIcon } from '../tenant/icons';
 import type { PropertyResponseDto } from '../../api/backend';
 
 interface EditListingModalProps {
@@ -23,6 +27,9 @@ function EditForm({ dto, onClose, onUpdated }: {
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [suggestion, setSuggestion] = useState<ListingCopySuggestion | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [form, setForm] = useState<NewListingInput>({
     title: dto.title,
     description: dto.description,
@@ -39,6 +46,35 @@ function EditForm({ dto, onClose, onUpdated }: {
 
   const set = <K extends keyof NewListingInput>(key: K, value: NewListingInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  const hasPhotos = Boolean(dto.photoPaths?.trim());
+
+  const generate = async () => {
+    setAiError(null);
+    setGenerating(true);
+    try {
+      setSuggestion(await generateListingCopy(dto.propertyId));
+    } catch (err) {
+      setAiError(aiErrorMessage(err));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Highlights are marketing bullets with no field of their own — fold them
+  // into the description; nothing persists until the host saves the form.
+  const suggestedDescription = (s: ListingCopySuggestion) =>
+    s.highlights.length > 0
+      ? `${s.description}\n\n${s.highlights.map((h) => `• ${h}`).join('\n')}`
+      : s.description;
+
+  const applyTitle = () => { if (suggestion) set('title', suggestion.title); };
+  const applyDescription = () => { if (suggestion) set('description', suggestedDescription(suggestion)); };
+  const applyAll = () => {
+    if (!suggestion) return;
+    setForm((f) => ({ ...f, title: suggestion.title, description: suggestedDescription(suggestion) }));
+    setSuggestion(null);
+  };
 
   const canSubmit =
     form.title.trim().length > 0 &&
@@ -74,6 +110,41 @@ function EditForm({ dto, onClose, onUpdated }: {
   return (
     <form onSubmit={submit} className="space-y-4">
       <ListingFields form={form} set={set} autoFocusTitle />
+
+      <div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => void generate()}
+          disabled={generating || saving || !hasPhotos}
+        >
+          <span className="flex items-center gap-1.5">
+            <SparkleIcon size={15} />
+            {generating ? 'Writing your listing…' : 'Write it for me'}
+          </span>
+        </Button>
+        {!hasPhotos && (
+          <p className="mt-1 text-xs text-muted">
+            Upload photos first — the AI writes from your pictures.
+          </p>
+        )}
+        {aiError && (
+          <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600" role="alert">
+            {aiError}
+          </p>
+        )}
+      </div>
+
+      {suggestion && (
+        <ListingCopySuggestionCard
+          suggestion={suggestion}
+          onApplyTitle={applyTitle}
+          onApplyDescription={applyDescription}
+          onApplyAll={applyAll}
+          onDismiss={() => setSuggestion(null)}
+        />
+      )}
 
       {error && (
         <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600" role="alert">

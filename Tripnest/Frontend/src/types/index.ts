@@ -23,7 +23,7 @@ export interface Review {
 }
 
 export interface Reservation {
-  id: number;
+  id: string;
   property: string;
   location: string;
   status: ReservationStatus;
@@ -292,7 +292,7 @@ export interface EarningsSummary {
 export type InquiryStatus = 'new' | 'replied' | 'archived';
 
 export interface Inquiry {
-  id: number;
+  id: string;
   guest: string;
   listing: string;
   message: string;
@@ -329,7 +329,7 @@ export interface LandlordTenant {
 }
 
 export interface LandlordReview {
-  id: number;
+  id: string;
   guest: string;
   listing: string;
   rating: number;
@@ -429,7 +429,7 @@ export interface TeamUser {
 export type ExchangeCategory = 'Tips' | 'Suppliers' | 'Regulation' | 'Marketplace' | 'General';
 
 export interface ExchangePost {
-  id: number;
+  id: string;
   author: string;
   role: string;
   initials: string;
@@ -439,6 +439,14 @@ export interface ExchangePost {
   replies: number;
   createdAt: string;
   pinned: boolean;
+}
+
+export interface ExchangeReply {
+  id: string;
+  author: string;
+  initials: string;
+  body: string;
+  createdAt: string;
 }
 
 //  Host dashboard: Resources

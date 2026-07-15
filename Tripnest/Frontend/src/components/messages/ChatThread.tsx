@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Conversation } from '../../types';
-import { getMessages, sendMessage } from '../../api/messages';
+import { getMessages, sendMessage, suggestReply } from '../../api/messages';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../AsyncBoundary';
 import Card from '../ui/Card';
@@ -162,6 +162,7 @@ export default function ChatThread({ conversation, onBack, className = '' }: Cha
           onSendVoice={(audioUrl, duration) => append({ text: '', audioUrl, duration })}
           onAttach={(file) => append({ text: `📎 ${file.name}` })}
           onNotice={setBanner}
+          suggest={() => suggestReply(conversation.id)}
         />
       </div>
 

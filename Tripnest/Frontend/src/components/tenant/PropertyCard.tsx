@@ -36,18 +36,19 @@ export default function PropertyCard({ property, initialSaved = false, onToggleS
       to={`/property/${property.id}`}
       className="group block overflow-hidden rounded-xl border border-gray-200 bg-white no-underline transition-shadow hover:shadow-md"
     >
-      <div className="relative h-40 bg-gradient-to-br from-brand-50 to-gray-200">
+      <div className="relative h-40 bg-linear-to-br from-brand-50 to-gray-200">
         {/* Click the image to start the immersive virtual tour. */}
-        <button
-          type="button"
-          onClick={openTour}
-          aria-label={`Start virtual tour of ${property.title}`}
-          className="absolute inset-0 z-10 flex items-center justify-center bg-black/0 transition-colors hover:bg-black/15 focus-visible:bg-black/15"
+            <button
+            type="button"
+            onClick={openTour}
+            aria-label={`Start virtual tour of ${property.title}`}
+            className="absolute inset-0 z-10 flex items-center justify-center bg-black/0 transition-colors hover:bg-black/15 focus-visible:bg-black/15"
         >
           <span className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-ink opacity-0 shadow transition-opacity group-hover:opacity-100 focus-visible:opacity-100">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8 5v14l11-7z" /></svg>
             Virtual tour
           </span>
+
         </button>
         {property.verified && (
           <span className="absolute left-3 top-3 z-20 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[11px] font-semibold text-brand">
@@ -73,11 +74,11 @@ export default function PropertyCard({ property, initialSaved = false, onToggleS
       </div>
 
       <div className="p-4">
-        <p className="text-[11px] font-medium text-muted">TN-ID: {property.id}</p>
+           <p className="text-[11px] font-medium text-muted">TN-ID: {property.id}</p>
         <h3 className="mt-0.5 font-semibold text-ink">{property.title}</h3>
         <p className="text-sm text-muted">{property.location}</p>
 
-        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1">
+         <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1">
           {property.amenities.map((a) => (
             <span key={a} className="flex items-center gap-1 text-xs text-muted">
               <AmenityIcon name={a} /> {a}
@@ -88,7 +89,7 @@ export default function PropertyCard({ property, initialSaved = false, onToggleS
         <div className="mt-3 flex items-end justify-between">
           <p className="font-bold text-brand">
             {formatCedi(property.price)}
-            <span className="text-xs font-normal text-muted"> / {property.period}</span>
+                <span className="text-xs font-normal text-muted"> / {property.period}</span>
           </p>
           <span className="flex items-center gap-1 text-xs text-ink">
             <StarIcon size={13} className="text-amber-400" />

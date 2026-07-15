@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { ChatIcon, MailIcon, PhoneIcon, ChevronDownIcon } from '../../components/tenant/icons';
+import { SparkleIcon, MailIcon, PhoneIcon, ChevronDownIcon } from '../../components/tenant/icons';
+import { openAssistant } from '../../store/assistantStore';
 
 const FAQS = [
   { q: 'How do I know a listing is verified?', a: 'Every verified listing carries a TripNest ID and a green Verified badge after our team inspects the property and confirms ownership.' },
@@ -52,13 +52,12 @@ function ContactCard({ icon, label, value, href, onClick }: {
 }
 
 export default function HelpPage() {
-  const navigate = useNavigate();
   return (
     <div className="max-w-3xl">
       <h1 className="mb-6 text-3xl font-bold text-ink">Help &amp; Support</h1>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <ContactCard icon={<ChatIcon size={18} />} label="Live chat" value="Chat with us" onClick={() => navigate('/messages')} />
+        <ContactCard icon={<SparkleIcon size={18} />} label="AI assistant" value="Ask TripNest" onClick={openAssistant} />
         <ContactCard icon={<MailIcon size={18} />} label="Email" value="help@tripnest.gh" href="mailto:help@tripnest.gh" />
         <ContactCard icon={<PhoneIcon size={18} />} label="Phone" value="+233 24 123 4567" href="tel:+233241234567" />
       </div>
@@ -72,8 +71,8 @@ export default function HelpPage() {
         </div>
         <div className="mt-5 rounded-xl bg-brand-50 p-4">
           <p className="font-semibold text-ink">Still need help?</p>
-          <p className="mb-3 text-sm text-muted">Our support team replies within minutes during business hours.</p>
-          <Button size="sm" onClick={() => navigate('/messages')}>Contact support</Button>
+          <p className="mb-3 text-sm text-muted">Ask the assistant — it loops in our support team whenever a human is needed.</p>
+          <Button size="sm" onClick={openAssistant}>Contact support</Button>
         </div>
       </Card>
     </div>

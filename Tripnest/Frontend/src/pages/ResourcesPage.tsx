@@ -63,7 +63,9 @@ export default function ResourcesPage() {
             : rows;
 
           return visible.length === 0 ? (
-            <p className="text-muted">No resources match “{query}”.</p>
+            <p className="text-muted">
+              {q ? `No resources match “${query}”.` : 'No resources have been published yet.'}
+            </p>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {visible.map((r) => (

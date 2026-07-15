@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { ChatIcon, MailIcon, PhoneIcon, ChevronDownIcon } from '../../components/tenant/icons';
+import { SparkleIcon, MailIcon, PhoneIcon, ChevronDownIcon } from '../../components/tenant/icons';
+import { openAssistant } from '../../store/assistantStore';
 
 const FAQS = [
   { q: 'How do payouts work?', a: 'Earnings are released to your default payout method (MTN MoMo by default) on the 1st of each month, net of TripNest’s management fee. You can withdraw your available balance any time from the Earnings page.' },
@@ -45,13 +45,12 @@ function ContactCard({ icon, label, value, href, onClick }: {
 }
 
 export default function LandlordHelpPage() {
-  const navigate = useNavigate();
   return (
     <div className="max-w-3xl">
       <h1 className="mb-6 text-3xl font-bold tracking-tight text-ink">Help &amp; Support</h1>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <ContactCard icon={<ChatIcon size={18} />} label="Host support" value="Chat with us" onClick={() => navigate('/messages')} />
+        <ContactCard icon={<SparkleIcon size={18} />} label="AI assistant" value="Ask TripNest" onClick={openAssistant} />
         <ContactCard icon={<MailIcon size={18} />} label="Email" value="hosts@tripnest.gh" href="mailto:hosts@tripnest.gh" />
         <ContactCard icon={<PhoneIcon size={18} />} label="Phone" value="+233 24 123 4567" href="tel:+233241234567" />
       </div>
@@ -63,8 +62,8 @@ export default function LandlordHelpPage() {
         </div>
         <div className="mt-5 rounded-xl bg-brand-50 p-4">
           <p className="font-semibold text-ink">Still need help?</p>
-          <p className="mb-3 text-sm text-muted">Our host team replies within minutes during business hours.</p>
-          <Button variant="dark" size="sm" onClick={() => navigate('/messages')}>Contact host support</Button>
+          <p className="mb-3 text-sm text-muted">Ask the assistant — it loops in our host team whenever a human is needed.</p>
+          <Button variant="dark" size="sm" onClick={openAssistant}>Contact host support</Button>
         </div>
       </Card>
     </div>

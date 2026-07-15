@@ -1,17 +1,23 @@
 import type { Reservation } from '../types';
-import { getReservationsSnapshot } from '../store/bookingStore';
-import { mockResponse } from './client';
+import { apiGet } from './client';
+import {
+  mapReservationDetails,
+  mapReservationRow,
+  type LandlordBookingResponseDto,
+  type PagedResultDto,
+  type ReservationDetailsResponseDto,
+} from './backend';
 
-// Service layer for reservations. Today these resolve the live in-memory store
-// (seeded from mock data); to go live, swap each body for the commented apiGet
-// call — callers don't change.
+// Host reservations, backed by TripNest.Core's landlord workspace. The list
+// gives the table rows; the per-booking details call adds the earnings
+// breakdown and guest reviews.
 
-export function getReservations(): Promise<Reservation[]> {
-  // return apiGet<Reservation[]>('/reservations');
-  return mockResponse(getReservationsSnapshot());
+export async function getReservations(): Promise<Reservation[]> {
+  const page = await apiGet<PagedResultDto<LandlordBookingResponseDto>>('/api/landlord/bookings?page=1&pageSize=50');
+  return page.items.map(mapReservationRow);
 }
 
-export function getReservationById(id: number): Promise<Reservation | undefined> {
-  // return apiGet<Reservation>(`/reservations/${id}`);
-  return mockResponse(getReservationsSnapshot().find((r) => r.id === id));
+export async function getReservationById(id: string): Promise<Reservation | undefined> {
+  const dto = await apiGet<ReservationDetailsResponseDto>(`/api/landlord/reservations/${id}`);
+  return mapReservationDetails(dto);
 }

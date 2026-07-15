@@ -3,7 +3,7 @@ import type { ExchangePost } from '../types';
 // Mock posts on the owner community board. Swap for API data later.
 export const exchangePosts: ExchangePost[] = [
   {
-    id: 1,
+    id: '1',
     author: 'TripNest Team',
     role: 'Admin',
     initials: 'TN',
@@ -15,7 +15,7 @@ export const exchangePosts: ExchangePost[] = [
     pinned: true,
   },
   {
-    id: 2,
+    id: '2',
     author: 'Adwoa Owusu',
     role: 'Superhost · Accra',
     initials: 'AO',
@@ -27,7 +27,7 @@ export const exchangePosts: ExchangePost[] = [
     pinned: false,
   },
   {
-    id: 3,
+    id: '3',
     author: 'Kofi Asante',
     role: 'Host · Kumasi',
     initials: 'KA',
@@ -39,7 +39,7 @@ export const exchangePosts: ExchangePost[] = [
     pinned: false,
   },
   {
-    id: 4,
+    id: '4',
     author: 'Efua Sarpong',
     role: 'Agent · Accra',
     initials: 'ES',

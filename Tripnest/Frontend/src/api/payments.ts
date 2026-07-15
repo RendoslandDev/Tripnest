@@ -1,5 +1,4 @@
 import type { Payment, PaymentMethod, Transaction } from '../types';
-import { paymentMethods } from '../data/payments';
 import {
   initiatePayment as storeInitiate,
   verifyPayment as storeVerify,
@@ -8,8 +7,14 @@ import {
   type InitiateResult,
   type MomoNetwork,
 } from '../store/paymentStore';
-import { apiDownload, apiGet, mockResponse } from './client';
-import { formatIsoDate, type PagedResultDto, type ReceiptResponseDto } from './backend';
+import { apiDelete, apiDownload, apiGet, apiPatch, apiPost, mockResponse } from './client';
+import {
+  formatIsoDate,
+  mapPaymentMethod,
+  type PagedResultDto,
+  type PaymentMethodResponseDto,
+  type ReceiptResponseDto,
+} from './backend';
 import { getBookings } from './bookings';
 
 /** Settled payments = the user's receipts. Joined against bookings for property names. */
@@ -34,10 +39,34 @@ export function downloadReceipt(receiptId: string): Promise<void> {
   return apiDownload(`/api/receipts/${receiptId}/download`, `tripnest-receipt-${receiptId.slice(0, 8)}.pdf`);
 }
 
-// Saved payment methods have no backend yet (Paystack's hosted page collects
-// the instrument per charge) — still mock-backed.
-export function getPaymentMethods(): Promise<PaymentMethod[]> {
-  return mockResponse(paymentMethods);
+// Saved payment methods, backed by /api/payments/methods. These are display
+// preferences — Paystack's hosted page still collects the instrument per charge.
+export async function getPaymentMethods(): Promise<PaymentMethod[]> {
+  const dtos = await apiGet<PaymentMethodResponseDto[]>('/api/payments/methods');
+  return dtos.map(mapPaymentMethod);
+}
+
+export async function addPaymentMethod(
+  provider: string,
+  maskedNumber: string,
+  channel: 'momo' | 'card',
+  makePrimary = false,
+): Promise<PaymentMethod> {
+  const dto = await apiPost<PaymentMethodResponseDto>('/api/payments/methods', {
+    provider,
+    maskedNumber,
+    channel,
+    makePrimary,
+  });
+  return mapPaymentMethod(dto);
+}
+
+export function setPrimaryPaymentMethod(id: string): Promise<unknown> {
+  return apiPatch(`/api/payments/methods/${id}/primary`);
+}
+
+export function deletePaymentMethod(id: string): Promise<unknown> {
+  return apiDelete(`/api/payments/methods/${id}`);
 }
 
 // Legacy in-browser charge simulation. Real checkout now goes through

@@ -1,11 +1,11 @@
 import type { Resource } from '../types';
-import { resources as mockResources } from '../data/resources';
-import { mockResponse } from './client';
+import { apiGet } from './client';
+import { mapResource, type ResourceResponseDto } from './backend';
 
-// Service layer for host resources. Today these resolve local mock data; to go
-// live, swap each body for the commented apiGet call.
+// Host resource library (guides, policies, templates, videos), backed by
+// TripNest.Core's /api/resources endpoint.
 
-export function getResources(): Promise<Resource[]> {
-  // return apiGet<Resource[]>('/resources');
-  return mockResponse(mockResources);
+export async function getResources(): Promise<Resource[]> {
+  const dtos = await apiGet<ResourceResponseDto[]>('/api/resources');
+  return dtos.map(mapResource);
 }

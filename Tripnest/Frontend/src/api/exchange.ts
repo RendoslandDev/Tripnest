@@ -1,11 +1,44 @@
-import type { ExchangePost } from '../types';
-import { exchangePosts as mockPosts } from '../data/exchange';
-import { mockResponse } from './client';
+import type { ExchangeCategory, ExchangePost, ExchangeReply } from '../types';
+import { apiGet, apiPost } from './client';
+import {
+  mapExchangePost,
+  mapExchangeReply,
+  type ExchangePostResponseDto,
+  type ExchangeReplyResponseDto,
+  type PagedResultDto,
+} from './backend';
 
-// Service layer for the owner community board. Today these resolve local mock
-// data; to go live, swap each body for the commented apiGet/apiPost call.
+// Owner community board, backed by TripNest.Core's /api/exchange endpoints.
+// The list is paged server-side (pinned first, then newest).
 
-export function getExchangePosts(): Promise<ExchangePost[]> {
-  // return apiGet<ExchangePost[]>('/exchange/posts');
-  return mockResponse(mockPosts);
+export async function getExchangePosts(): Promise<ExchangePost[]> {
+  const page = await apiGet<PagedResultDto<ExchangePostResponseDto>>(
+    '/api/exchange/posts?page=1&pageSize=50',
+  );
+  return page.items.map(mapExchangePost);
+}
+
+export async function createExchangePost(
+  title: string,
+  body: string,
+  category: ExchangeCategory,
+): Promise<ExchangePost> {
+  const dto = await apiPost<ExchangePostResponseDto>('/api/exchange/posts', {
+    title,
+    body,
+    category,
+  });
+  return mapExchangePost(dto);
+}
+
+export async function getExchangeReplies(postId: string): Promise<ExchangeReply[]> {
+  const dtos = await apiGet<ExchangeReplyResponseDto[]>(`/api/exchange/posts/${postId}/replies`);
+  return dtos.map(mapExchangeReply);
+}
+
+export async function addExchangeReply(postId: string, body: string): Promise<ExchangeReply> {
+  const dto = await apiPost<ExchangeReplyResponseDto>(`/api/exchange/posts/${postId}/replies`, {
+    body,
+  });
+  return mapExchangeReply(dto);
 }

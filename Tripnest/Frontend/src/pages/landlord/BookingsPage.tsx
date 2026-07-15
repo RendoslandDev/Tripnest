@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { LandlordBooking, LandlordBookingStatus } from '../../types';
-import { getLandlordBookings } from '../../api/landlord';
+import { declineLandlordBooking, getLandlordBookings } from '../../api/landlord';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import Card from '../../components/ui/Card';
@@ -30,8 +30,16 @@ function BookingsView({ initial }: { initial: LandlordBooking[] }) {
   const [rows, setRows] = useState(initial);
   const [tab, setTab] = useState<LandlordBookingStatus | 'all'>('all');
 
-  const setStatus = (id: string, status: LandlordBookingStatus) =>
-    setRows((rs) => rs.map((b) => (b.id === id ? { ...b, status } : b)));
+  // Confirmation/check-in happen server-side when the guest pays and checks in;
+  // the landlord's only action here is declining, which cancels with a full refund.
+  const decline = async (id: string) => {
+    try {
+      await declineLandlordBooking(id);
+      setRows((rs) => rs.map((b) => (b.id === id ? { ...b, status: 'cancelled' } : b)));
+    } catch {
+      // leave the row untouched — the cancel didn't go through
+    }
+  };
 
   const visible = useMemo(() => (tab === 'all' ? rows : rows.filter((b) => b.status === tab)), [rows, tab]);
   const pending = rows.filter((b) => b.status === 'pending').length;
@@ -76,17 +84,8 @@ function BookingsView({ initial }: { initial: LandlordBooking[] }) {
               <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end">
                 <span className="font-bold text-brand">{formatCedi(b.amount)}</span>
                 <div className="flex gap-2">
-                  {b.status === 'pending' && (
-                    <>
-                      <Button variant="dark" size="sm" onClick={() => setStatus(b.id, 'confirmed')}>Confirm</Button>
-                      <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50" onClick={() => setStatus(b.id, 'cancelled')}>Decline</Button>
-                    </>
-                  )}
-                  {b.status === 'confirmed' && (
-                    <Button variant="dark" size="sm" onClick={() => setStatus(b.id, 'checked-in')}>Check in</Button>
-                  )}
-                  {b.status === 'checked-in' && (
-                    <Button variant="dark" size="sm" onClick={() => setStatus(b.id, 'completed')}>Mark complete</Button>
+                  {(b.status === 'pending' || b.status === 'confirmed') && (
+                    <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50" onClick={() => decline(b.id)}>Decline</Button>
                   )}
                 </div>
               </div>

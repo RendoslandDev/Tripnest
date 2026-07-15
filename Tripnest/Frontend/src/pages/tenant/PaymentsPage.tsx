@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Payment, PaymentChannel, PaymentMethod, PaymentStatus } from '../../types';
-import { downloadReceipt, getPayments, getPaymentMethods, initiatePayment, verifyPayment } from '../../api/payments';
+import {
+  addPaymentMethod,
+  deletePaymentMethod,
+  downloadReceipt,
+  getPayments,
+  getPaymentMethods,
+  initiatePayment,
+  setPrimaryPaymentMethod,
+  verifyPayment,
+} from '../../api/payments';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import Card from '../../components/ui/Card';
@@ -86,23 +95,24 @@ function StatCard({
   );
 }
 
-function AddMethodForm({ onAdd }: { onAdd: (m: PaymentMethod) => void }) {
+function AddMethodForm({ onAdd }: { onAdd: (provider: string, digits: string) => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [provider, setProvider] = useState('MTN MoMo');
   const [number, setNumber] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const digits = number.replace(/\D/g, '');
-    if (digits.length < 4) return;
-    onAdd({
-      id: `PM-${Date.now()}`,
-      provider,
-      number: `•••• ${digits.slice(-4)}`,
-      primary: false,
-    });
-    setNumber('');
-    setOpen(false);
+    if (digits.length < 4 || saving) return;
+    setSaving(true);
+    try {
+      await onAdd(provider, digits);
+      setNumber('');
+      setOpen(false);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!open) {
@@ -137,7 +147,7 @@ function AddMethodForm({ onAdd }: { onAdd: (m: PaymentMethod) => void }) {
         className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brand"
       />
       <div className="flex gap-2">
-        <Button type="submit" size="sm" className="flex-1">Save</Button>
+        <Button type="submit" size="sm" className="flex-1" disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
         <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
       </div>
     </form>
@@ -147,9 +157,11 @@ function AddMethodForm({ onAdd }: { onAdd: (m: PaymentMethod) => void }) {
 function MethodRow({
   method,
   onSetPrimary,
+  onRemove,
 }: {
   method: PaymentMethod;
   onSetPrimary: (id: string) => void;
+  onRemove: (id: string) => void;
 }) {
   return (
     <div
@@ -169,13 +181,23 @@ function MethodRow({
       {method.primary ? (
         <Badge tone="green">Primary</Badge>
       ) : (
-        <button
-          type="button"
-          onClick={() => onSetPrimary(method.id)}
-          className="shrink-0 text-xs font-semibold text-brand hover:underline"
-        >
-          Set primary
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={() => onSetPrimary(method.id)}
+            className="shrink-0 text-xs font-semibold text-brand hover:underline"
+          >
+            Set primary
+          </button>
+          <button
+            type="button"
+            onClick={() => onRemove(method.id)}
+            aria-label={`Remove ${method.provider}`}
+            className="shrink-0 text-xs font-semibold text-muted hover:text-rose-600"
+          >
+            ×
+          </button>
+        </>
       )}
     </div>
   );
@@ -307,11 +329,25 @@ function PaymentsView({
     );
   };
 
-  const addMethod = (m: PaymentMethod) =>
-    setMethods((ms) => [...ms, ms.length === 0 ? { ...m, primary: true } : m]);
+  const addMethod = async (provider: string, digits: string) => {
+    const channel = /card|visa|master/i.test(provider) ? 'card' : 'momo';
+    try {
+      const saved = await addPaymentMethod(provider, `•••• ${digits.slice(-4)}`, channel, methods.length === 0);
+      setMethods((ms) => [...ms, saved]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save that payment method.');
+    }
+  };
 
-  const setPrimary = (id: string) =>
+  const setPrimary = (id: string) => {
     setMethods((ms) => ms.map((m) => ({ ...m, primary: m.id === id })));
+    setPrimaryPaymentMethod(id).catch(() => {});
+  };
+
+  const removeMethod = (id: string) => {
+    setMethods((ms) => ms.filter((m) => m.id !== id));
+    deletePaymentMethod(id).catch(() => {});
+  };
 
   return (
     <div className="space-y-6">
@@ -429,7 +465,7 @@ function PaymentsView({
             <h2 className="mb-3 font-bold text-ink">Payment methods</h2>
             <div className="space-y-2">
               {methods.map((m) => (
-                <MethodRow key={m.id} method={m} onSetPrimary={setPrimary} />
+                <MethodRow key={m.id} method={m} onSetPrimary={setPrimary} onRemove={removeMethod} />
               ))}
               <AddMethodForm onAdd={addMethod} />
             </div>

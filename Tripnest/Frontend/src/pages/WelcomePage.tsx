@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { login, register, useSession, type Role } from '../store/authStore';
-import { HexIcon, UserIcon, KeyIcon, ShieldIcon, StarIcon } from '../components/tenant/icons';
+import { homeForRole } from '../lib/roleHome';
+import SocialSignIn from '../components/SocialSignIn';
+import ForgotPassword from '../components/ForgotPassword';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { signIn, register, useSession, type Role } from '../store/authStore';
+import { HexIcon, UserIcon, KeyIcon, ShieldIcon, StarIcon, ToolIcon , UserCheckIcon} from '../components/tenant/icons';
 
 // Poster-style background tiles (Ghanaian cities), echoing the inspiration wall.
 const TILES: { city: string; from: string; to: string }[] = [
@@ -59,10 +62,10 @@ function GoogleMark() {
   );
 }
 
-function AppleMark() {
+function XMark() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
-      <path d="M16.37 1.43c.08 1-.32 1.98-.95 2.69-.66.74-1.74 1.31-2.79 1.23-.1-.98.37-2 .96-2.64.66-.73 1.82-1.28 2.78-1.28zM20.4 17.2c-.55 1.27-.82 1.84-1.53 2.96-.99 1.57-2.39 3.53-4.12 3.54-1.54.02-1.94-1-4.03-.99-2.1.01-2.53 1.01-4.07.99-1.73-.01-3.05-1.78-4.04-3.35-2.77-4.4-3.06-9.56-1.35-12.3 1.21-1.95 3.12-3.09 4.92-3.09 1.83 0 2.98 1 4.49 1 1.47 0 2.36-1 4.48-1 1.6 0 3.3.87 4.51 2.38-3.96 2.17-3.32 7.83.26 9.86z" />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
     </svg>
   );
 }
@@ -93,46 +96,48 @@ function RoleOption({ active, icon, title, desc, onClick }: {
 export default function WelcomePage() {
   const navigate = useNavigate();
   const session = useSession();
-  // Deep links from marketing surfaces (e.g. /welcome?mode=signup&role=landlord).
-  const [params] = useSearchParams();
-  const [mode, setMode] = useState<'signin' | 'signup'>(
-    params.get('mode') === 'signup' ? 'signup' : 'signin',
-  );
-  const [role, setRole] = useState<Role>(params.get('role') === 'landlord' ? 'landlord' : 'tenant');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
+  const [role, setRole] = useState<Role>('tenant');
   const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   // Already signed in → straight to the right surface.
-  if (session) return <Navigate to={session.role === 'landlord' ? '/landlord' : '/'} replace />;
+  if (session) return <Navigate to={homeForRole(session.role)} replace />;
 
-  const continueEmail = async (e: React.FormEvent) => {
+
+
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const addr = email.trim().toLowerCase();
     if (!EMAIL_RE.test(addr)) {
       setError('Enter a valid email address.');
       return;
     }
-    if (password.length < 6) {
-      setError('Enter your password (at least 6 characters).');
-      return;
-    }
-    if (mode === 'signup' && (!fullName.trim() || !phone.trim())) {
-      setError('Enter your full name and phone number.');
+    if (mode === 'signup' && password !== confirmPassword) {
+      setError('Passwords do not match.');
       return;
     }
     setBusy(true);
-    setError(null);
     try {
-      const next = mode === 'signup'
-        ? await register({ fullName: fullName.trim(), email: addr, password, phone: phone.trim(), role })
-        : await login(addr, password);
-      navigate(next.role === 'landlord' ? '/landlord' : '/', { replace: true });
+      const s = mode === 'signin'
+        ? await signIn(email.trim().toLowerCase(), password)
+        : await register({
+            fullName: fullName.trim(),
+            email: email.trim().toLowerCase(),
+            password,
+            confirmPassword,
+            phone: phone.trim(),
+            role,
+          });
+      // New accounts go through identity verification (with a skip); returning users go straight in.
+      navigate(mode === 'signup' ? '/get-verified' : homeForRole(s.role), { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Is the TripNest API running?');
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setBusy(false);
     }
@@ -177,46 +182,62 @@ export default function WelcomePage() {
             </div>
           </div>
 
-          {/* Role choice */}
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">I want to</p>
-          <div className="mb-5 flex gap-3">
-            <RoleOption
-              active={role === 'tenant'}
-              icon={<UserIcon size={16} />}
-              title="Rent a home"
-              desc="Find & book places"
-              onClick={() => setRole('tenant')}
-            />
-            <RoleOption
-              active={role === 'landlord'}
-              icon={<KeyIcon size={16} />}
-              title="List a property"
-              desc="Host & earn"
-              onClick={() => setRole('landlord')}
-            />
-          </div>
+          {/* Role choice (sign-up only — sign-in derives the role from the account) */}
+          {mode === 'signup' && (
+            <>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">I want to join as</p>
+              <div className="mb-5 grid grid-cols-2 gap-3">
+                <RoleOption
+                  active={role === 'tenant'}
+                  icon={<UserIcon size={16} />}
+                  title="Tenant"
+                  desc="Find & book places"
+                  onClick={() => setRole('tenant')}
+                />
+                <RoleOption
+                  active={role === 'landlord'}
+                  icon={<KeyIcon size={16} />}
+                  title="Landlord"
+                  desc="Host & earn"
+                  onClick={() => setRole('landlord')}
+                />
+                <RoleOption
+                  active={role === 'agent'}
+                  icon={<UserCheckIcon size={16} />}
+                  title="Agent"
+                  desc="List & do viewings"
+                  onClick={() => setRole('agent')}
+                />
+                <RoleOption
+                  active={role === 'caretaker'}
+                  icon={<ToolIcon size={16} />}
+                  title="Caretaker"
+                  desc="Manage & maintain"
+                  onClick={() => setRole('caretaker')}
+                />
+              </div>
+              {(role === 'landlord' || role === 'agent' || role === 'caretaker') && (
+                <p className="-mt-3 mb-4 text-xs text-muted">
+                  You'll complete Ghana Card verification from your profile before you can list or work.
+                </p>
+              )}
+            </>
+          )}
 
-          {/* Email + password */}
-          <form onSubmit={continueEmail} className="space-y-3">
+          {mode === 'forgot' ? (
+            <ForgotPassword onDone={() => { setMode('signin'); setError(null); }} />
+          ) : (
+          <>
+          <form onSubmit={submit} className="space-y-3">
             {mode === 'signup' && (
-              <>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => { setFullName(e.target.value); setError(null); }}
-                  placeholder="Full name"
-                  aria-label="Full name"
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand"
-                />
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => { setPhone(e.target.value); setError(null); }}
-                  placeholder="Phone (e.g. 024 123 4567)"
-                  aria-label="Phone number"
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand"
-                />
-              </>
+              <input
+                value={fullName}
+                onChange={(e) => { setFullName(e.target.value); setError(null); }}
+                placeholder="Full name"
+                aria-label="Full name"
+                required
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand"
+              />
             )}
             <input
               type="email"
@@ -224,42 +245,80 @@ export default function WelcomePage() {
               onChange={(e) => { setEmail(e.target.value); setError(null); }}
               placeholder="Email address"
               aria-label="Email address"
-              className={`w-full rounded-xl border px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand ${
-                error ? 'border-rose-400' : 'border-gray-300'
-              }`}
+              required
+              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand"
             />
-            <div>
+            {mode === 'signup' && (
+              <input
+                value={phone}
+                onChange={(e) => { setPhone(e.target.value); setError(null); }}
+                inputMode="tel"
+                placeholder="Phone (e.g. 024 123 4567)"
+                aria-label="Phone number"
+                required
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand"
+              />
+            )}
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(null); }}
+              placeholder="Password"
+              aria-label="Password"
+              required
+              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand"
+            />
+            {mode === 'signin' && (
+              <button
+                type="button"
+                onClick={() => { setMode('forgot'); setError(null); }}
+                className="block w-full text-right text-xs font-semibold text-brand"
+              >
+                Forgot password?
+              </button>
+            )}
+            {mode === 'signup' && (
               <input
                 type="password"
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); setError(null); }}
-                placeholder="Password"
-                aria-label="Password"
-                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                className={`w-full rounded-xl border px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand ${
-                  error ? 'border-rose-400' : 'border-gray-300'
-                }`}
+                value={confirmPassword}
+                onChange={(e) => { setConfirmPassword(e.target.value); setError(null); }}
+                placeholder="Confirm password"
+                aria-label="Confirm password"
+                required
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-brand"
               />
-              {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
-            </div>
+            )}
+            {error && <p className="text-xs text-rose-600" role="alert">{error}</p>}
             <button
               type="submit"
               disabled={busy}
-              className="w-full rounded-xl bg-brand py-3 text-sm font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-wait disabled:opacity-60"
+              className="w-full rounded-xl bg-brand py-3 text-sm font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-60"
             >
-              {busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Sign in'}
+              {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
             </button>
-            <p className="text-center text-xs text-muted">
-              {mode === 'signup' ? 'Already have an account?' : 'New to TripNest?'}{' '}
-              <button
-                type="button"
-                onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError(null); }}
-                className="font-semibold text-brand"
-              >
-                {mode === 'signup' ? 'Sign in' : 'Create an account'}
-              </button>
-            </p>
           </form>
+
+          <div className="mt-4">
+            <SocialSignIn onSignedIn={(s) => navigate(homeForRole(s.role), { replace: true })} />
+          </div>
+          </>
+          )}
+
+          <p className="mt-4 text-center text-sm text-muted">
+            {mode === 'signin' ? (
+              <>New to TripNest?{' '}
+                <button type="button" onClick={() => { setMode('signup'); setError(null); }} className="font-semibold text-brand">
+                  Create an account
+                </button>
+              </>
+            ) : (
+              <>Already have an account?{' '}
+                <button type="button" onClick={() => { setMode('signin'); setError(null); }} className="font-semibold text-brand">
+                  Sign in
+                </button>
+              </>
+            )}
+          </p>
 
           {/* Divider */}
           <div className="my-5 flex items-center gap-3 text-xs font-medium text-muted">
@@ -280,7 +339,7 @@ export default function WelcomePage() {
               onClick={social}
               className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-gray-300 py-3 text-sm font-semibold text-ink transition-colors hover:bg-gray-50"
             >
-              <AppleMark /> Continue with Apple
+              <XMark /> Continue with X
             </button>
           </div>
 

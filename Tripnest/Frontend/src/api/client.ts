@@ -1,4 +1,21 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? '';
+// Real HTTP client for the TripNest.Core API.
+//
+// Every backend response is wrapped in an envelope:
+//   { message: string, statusCode: number, data: T | null, success: boolean }
+// We unwrap `.data` here, once, so callers get their payload directly and
+// failures surface as a thrown ApiError carrying the backend's message.
+//
+// Auth: a JWT access token is attached to every request. On a 401 we attempt
+// one refresh-token exchange and retry; if that fails we broadcast
+// `tripnest:unauthorized` so the auth store can clear the session.
+
+// Empty by default: requests stay same-origin so the Vite dev proxy forwards
+// them to the backend (Core only allows configured CORS origins). Production
+// builds set VITE_API_URL to the API origin instead.
+const BASE_URL: string = import.meta.env.VITE_API_URL ?? '';
+
+/** Origin of the API (for /uploads/... file links served outside /api). */
+export const API_ORIGIN = BASE_URL.replace(/\/api\/?$/, '');
 
 /** Simulated network latency for mock-backed services. */
 export const MOCK_DELAY = 400;
@@ -8,13 +25,7 @@ export function mockResponse<T>(value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), MOCK_DELAY));
 }
 
-// ---------------------------------------------------------------------------
-// Real client for TripNest.Core. Every endpoint answers with the envelope
-// { message, statusCode, data, success }; request() unwraps it, attaches the
-// JWT, and retries once through /api/auth/refresh-token on a 401.
-// ---------------------------------------------------------------------------
-
-export interface ApiEnvelope<T> {
+interface Envelope<T> {
   message: string;
   statusCode: number;
   data: T | null;
@@ -22,145 +33,133 @@ export interface ApiEnvelope<T> {
 }
 
 export class ApiError extends Error {
-  readonly status: number;
-  constructor(message: string, status: number) {
+  statusCode: number;
+
+  constructor(message: string, statusCode: number) {
     super(message);
     this.name = 'ApiError';
-    this.status = status;
+    this.statusCode = statusCode;
   }
 }
 
-// --- token storage ---------------------------------------------------------
+/** Paged list shape returned by ?page=&pageSize= endpoints. */
+export interface Paged<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
 
-const TOKEN_KEY = 'tripnest.tokens';
+// --- token storage -----------------------------------------------------------
+
+const ACCESS_KEY = 'tripnest.accessToken';
+const REFRESH_KEY = 'tripnest.refreshToken';
 
 export interface Tokens {
   accessToken: string;
   refreshToken: string;
 }
 
-export function getTokens(): Tokens | null {
-  try {
-    const raw = localStorage.getItem(TOKEN_KEY);
-    return raw ? (JSON.parse(raw) as Tokens) : null;
-  } catch {
-    return null;
-  }
+export function getAccessToken(): string | null {
+  try { return localStorage.getItem(ACCESS_KEY); } catch { return null; }
 }
 
-export function setTokens(tokens: Tokens): void {
-  try { localStorage.setItem(TOKEN_KEY, JSON.stringify(tokens)); } catch { /* ignore */ }
+/** Current token pair, or null when signed out. */
+export function getTokens(): Tokens | null {
+  const accessToken = getAccessToken();
+  if (!accessToken) return null;
+  let refreshToken = '';
+  try { refreshToken = localStorage.getItem(REFRESH_KEY) ?? ''; } catch { /* session-only auth */ }
+  return { accessToken, refreshToken };
+}
+
+export function setTokens(access: string | null, refresh: string | null): void {
+  try {
+    if (access) localStorage.setItem(ACCESS_KEY, access); else localStorage.removeItem(ACCESS_KEY);
+    if (refresh) localStorage.setItem(REFRESH_KEY, refresh); else localStorage.removeItem(REFRESH_KEY);
+  } catch { /* storage unavailable — session-only auth */ }
 }
 
 export function clearTokens(): void {
-  try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+  setTokens(null, null);
 }
 
-// --- request core ----------------------------------------------------------
-
-type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-
-async function rawRequest(method: Method, path: string, body?: unknown): Promise<Response> {
-  const headers: Record<string, string> = {};
-  const tokens = getTokens();
-  if (tokens?.accessToken) headers.Authorization = `Bearer ${tokens.accessToken}`;
-
-  let payload: BodyInit | undefined;
-  if (body instanceof FormData) {
-    payload = body;
-  } else if (body !== undefined) {
-    headers['Content-Type'] = 'application/json';
-    payload = JSON.stringify(body);
-  }
-
-  return fetch(`${BASE_URL}${path}`, { method, headers, body: payload });
-}
+// --- refresh flow ------------------------------------------------------------
 
 let refreshing: Promise<boolean> | null = null;
 
-/** Swap the refresh token for a new access token. Shared across callers. */
 async function tryRefresh(): Promise<boolean> {
-  if (!refreshing) {
-    refreshing = (async () => {
-      const tokens = getTokens();
-      if (!tokens?.refreshToken) return false;
-      try {
-        const res = await fetch(`${BASE_URL}/api/auth/refresh-token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken: tokens.refreshToken }),
-        });
-        if (!res.ok) return false;
-        const envelope = (await res.json()) as ApiEnvelope<{ accessToken?: string; refreshToken?: string }>;
-        const data = envelope.data;
-        if (!envelope.success || !data?.accessToken) return false;
-        setTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken ?? tokens.refreshToken });
-        return true;
-      } catch {
-        return false;
-      } finally {
-        refreshing = null;
-      }
-    })();
-  }
+  // Collapse concurrent 401s into a single refresh round-trip.
+  refreshing ??= (async () => {
+    const refreshToken = localStorage.getItem(REFRESH_KEY);
+    if (!refreshToken) return false;
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/refresh-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+      const envelope = (await res.json()) as Envelope<{ accessToken: string; refreshToken: string }>;
+      if (!envelope.success || !envelope.data) return false;
+      setTokens(envelope.data.accessToken, envelope.data.refreshToken);
+      return true;
+    } catch {
+      return false;
+    }
+  })().finally(() => { refreshing = null; });
   return refreshing;
 }
 
-async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
-  let res = await rawRequest(method, path, body);
+// --- core request ------------------------------------------------------------
 
-  if (res.status === 401 && !path.startsWith('/api/auth/')) {
-    if (await tryRefresh()) res = await rawRequest(method, path, body);
+async function request<T>(method: string, path: string, body?: unknown, retried = false): Promise<T> {
+  const token = getAccessToken();
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method,
+    headers: {
+      ...(body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: isForm ? (body as FormData) : body !== undefined ? JSON.stringify(body) : undefined,
+  });
+
+  if (res.status === 401 && token && !retried) {
+    if (await tryRefresh()) return request<T>(method, path, body, true);
+    setTokens(null, null);
+    window.dispatchEvent(new Event('tripnest:unauthorized'));
   }
 
-  let envelope: ApiEnvelope<T> | null = null;
+  let envelope: Envelope<T>;
   try {
-    envelope = (await res.json()) as ApiEnvelope<T>;
+    envelope = (await res.json()) as Envelope<T>;
   } catch {
-    // non-JSON body (unexpected); fall through to the status check
+    throw new ApiError(`Request to ${path} failed (${res.status})`, res.status);
   }
-
-  if (!res.ok || (envelope && !envelope.success)) {
-    throw new ApiError(envelope?.message ?? `Request to ${path} failed`, envelope?.statusCode ?? res.status);
-  }
-  return (envelope?.data ?? null) as T;
+  if (!envelope.success) throw new ApiError(envelope.message || 'Request failed', envelope.statusCode);
+  return envelope.data as T;
 }
 
-export function apiGet<T>(path: string): Promise<T> {
-  return request<T>('GET', path);
-}
-
-export function apiPost<T>(path: string, body?: unknown): Promise<T> {
-  return request<T>('POST', path, body);
-}
-
-export function apiPut<T>(path: string, body?: unknown): Promise<T> {
-  return request<T>('PUT', path, body);
-}
-
-export function apiPatch<T>(path: string, body?: unknown): Promise<T> {
-  return request<T>('PATCH', path, body);
-}
-
-export function apiDelete<T>(path: string): Promise<T> {
-  return request<T>('DELETE', path);
-}
-
-/** POST multipart/form-data (photos, walkthrough videos). */
-export function apiUpload<T>(path: string, form: FormData): Promise<T> {
-  return request<T>('POST', path, form);
-}
+export const apiGet = <T>(path: string) => request<T>('GET', path);
+export const apiPost = <T>(path: string, body?: unknown) => request<T>('POST', path, body);
+export const apiPut = <T>(path: string, body?: unknown) => request<T>('PUT', path, body);
+export const apiPatch = <T>(path: string, body?: unknown) => request<T>('PATCH', path, body);
+export const apiDelete = <T>(path: string) => request<T>('DELETE', path);
+/** Multipart upload (photos, videos) — browser sets the boundary header. */
+export const apiUpload = <T>(path: string, form: FormData) => request<T>('POST', path, form);
 
 /** Absolute URL for a backend-served asset path (e.g. /uploads/properties/x.jpg). */
 export function assetUrl(path: string): string {
-  return /^https?:\/\//.test(path) ? path : `${BASE_URL}${path}`;
+  return /^https?:\/\//.test(path) ? path : `${API_ORIGIN}${path}`;
 }
 
 /** Fetch an authenticated binary (PDF) endpoint and hand it to the browser as a download. */
 export async function apiDownload(path: string, filename: string): Promise<void> {
-  const tokens = getTokens();
+  const token = getAccessToken();
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: tokens?.accessToken ? { Authorization: `Bearer ${tokens.accessToken}` } : undefined,
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
   if (!res.ok) throw new ApiError(`Download from ${path} failed`, res.status);
   const url = URL.createObjectURL(await res.blob());

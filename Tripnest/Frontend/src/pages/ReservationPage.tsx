@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Reservation, ReservationStatus } from '../types';
-import { getReservations } from '../api/reservations';
+import { getReservationById, getReservations } from '../api/reservations';
 import { useAsync } from '../hooks/useAsync';
 import AsyncBoundary from '../components/AsyncBoundary';
 import StatusBadge from '../components/StatusBadge';
@@ -16,6 +16,17 @@ export default function ReservationPage() {
   const state = useAsync(getReservations, []);
   const [selected, setSelected] = useState<Reservation | null>(null);
   const [sortAsc, setSortAsc] = useState(true);
+
+  // Show the row right away; the details call fills in the earnings breakdown
+  // and guest reviews when it lands (unless another row was picked meanwhile).
+  const select = (row: Reservation) => {
+    setSelected(row);
+    getReservationById(row.id)
+      .then((full) => {
+        if (full) setSelected((cur) => (cur?.id === row.id ? full : cur));
+      })
+      .catch(() => {});
+  };
 
   return (
     <div>
@@ -60,7 +71,7 @@ export default function ReservationPage() {
                   return (
                     <tr
                       key={r.id}
-                      onClick={() => setSelected(r)}
+                      onClick={() => select(r)}
                       className={`cursor-pointer bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] [&>td]:border-y [&>td]:border-gray-100 [&>td:first-child]:rounded-l-xl [&>td:first-child]:border-l [&>td:last-child]:rounded-r-xl [&>td:last-child]:border-r ${
                         isSelected
                           ? '[&>td]:border-brand! [&>td]:bg-brand-50'

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Inquiry, InquiryStatus } from '../../types';
-import { getInquiries } from '../../api/landlord';
+import { getInquiries, setInquiryStatus } from '../../api/landlord';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import Card from '../../components/ui/Card';
@@ -23,8 +23,8 @@ const TABS: { id: InquiryStatus | 'all'; label: string }[] = [
 
 function InquiryCard({ inquiry, onReply, onArchive }: {
   inquiry: Inquiry;
-  onReply: (id: number) => void;
-  onArchive: (id: number) => void;
+  onReply: (id: string) => void;
+  onArchive: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
@@ -81,10 +81,12 @@ function InquiriesView({ initial }: { initial: Inquiry[] }) {
   const [rows, setRows] = useState(initial);
   const [tab, setTab] = useState<InquiryStatus | 'all'>('all');
 
-  const reply = (id: number) =>
-    setRows((rs) => rs.map((q) => (q.id === id ? { ...q, status: 'replied' } : q)));
-  const archive = (id: number) =>
-    setRows((rs) => rs.map((q) => (q.id === id ? { ...q, status: 'archived' } : q)));
+  const setStatus = (id: string, status: 'replied' | 'archived') => {
+    setRows((rs) => rs.map((q) => (q.id === id ? { ...q, status } : q)));
+    setInquiryStatus(id, status).catch(() => {});
+  };
+  const reply = (id: string) => setStatus(id, 'replied');
+  const archive = (id: string) => setStatus(id, 'archived');
 
   const visible = useMemo(() => (tab === 'all' ? rows : rows.filter((q) => q.status === tab)), [rows, tab]);
   const newCount = rows.filter((q) => q.status === 'new').length;

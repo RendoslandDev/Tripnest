@@ -18,7 +18,7 @@ function Stars({ n }: { n: number }) {
   );
 }
 
-function ReviewCard({ review, onReply }: { review: LandlordReview; onReply: (id: number, text: string) => void }) {
+function ReviewCard({ review, onReply }: { review: LandlordReview; onReply: (id: string, text: string) => void }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
 
@@ -74,7 +74,7 @@ function ReviewCard({ review, onReply }: { review: LandlordReview; onReply: (id:
 
 function ReviewsView({ initial }: { initial: LandlordReview[] }) {
   const [rows, setRows] = useState(initial);
-  const reply = (id: number, text: string) =>
+  const reply = (id: string, text: string) =>
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, reply: text } : r)));
 
   const avg = rows.reduce((s, r) => s + r.rating, 0) / rows.length;

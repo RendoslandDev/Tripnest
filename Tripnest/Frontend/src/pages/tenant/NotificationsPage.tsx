@@ -4,6 +4,7 @@ import { getNotifications, markAllNotificationsRead, markNotificationRead } from
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import Card from '../../components/ui/Card';
+import Badge from '../../components/ui/Badge';
 import {
   CalendarIcon, CardIcon, ToolIcon, MessageIcon, ShieldIcon,
 } from '../../components/tenant/icons';
@@ -14,6 +15,15 @@ const ICONS: Record<NotificationType, React.ReactNode> = {
   maintenance: <ToolIcon size={18} />,
   message: <MessageIcon size={18} />,
   safety: <ShieldIcon size={18} />,
+};
+
+// Safety alerts (e.g. off-platform payment warnings) get an amber treatment.
+const CHIPS: Record<NotificationType, string> = {
+  booking: 'bg-brand-50 text-brand',
+  payment: 'bg-brand-50 text-brand',
+  maintenance: 'bg-brand-50 text-brand',
+  message: 'bg-brand-50 text-brand',
+  safety: 'bg-amber-100 text-amber-700',
 };
 
 function NotificationsView({ initial }: { initial: Notification[] }) {
@@ -46,19 +56,26 @@ function NotificationsView({ initial }: { initial: Notification[] }) {
           <button
             key={n.id}
             onClick={() => markRead(n.id)}
-            className={`flex w-full gap-3 px-5 py-4 text-left transition-colors hover:bg-gray-50 ${n.read ? '' : 'bg-brand-50/40'}`}
+            className={`flex w-full gap-3 px-5 py-4 text-left transition-colors hover:bg-gray-50 ${
+              n.read ? '' : n.type === 'safety' ? 'bg-amber-50/60' : 'bg-brand-50/40'
+            }`}
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand">
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${CHIPS[n.type]}`}>
               {ICONS[n.type]}
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold text-ink">{n.title}</p>
+                <p className="flex items-center gap-2 font-semibold text-ink">
+                  {n.title}
+                  {n.type === 'safety' && <Badge tone="amber">Safety</Badge>}
+                </p>
                 <span className="shrink-0 text-xs text-muted">{n.time}</span>
               </div>
               <p className="text-sm text-muted">{n.body}</p>
             </div>
-            {!n.read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand" />}
+            {!n.read && (
+              <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.type === 'safety' ? 'bg-amber-500' : 'bg-brand'}`} />
+            )}
           </button>
         ))}
       </Card>

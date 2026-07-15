@@ -5,16 +5,29 @@ import type {
   BookingStatus,
   ChatMessage,
   Conversation,
+  ExchangePost,
+  ExchangeReply,
+  Inquiry,
+  LandlordBooking,
+  LandlordBookingStatus,
+  LandlordTenant,
   Listing,
   ListingStatus,
   MaintenanceStatus,
   MaintenanceTicket,
   Notification,
   NotificationType,
+  PaymentMethod,
   Property,
+  Reservation,
+  ReservationStatus,
+  Resource,
+  TenantStanding,
 } from '../types';
 import { assetUrl } from './client';
 import { getCachedListingPhotos } from '../lib/listingPhotos';
+import { exchangeCategoryFromInt, initialsOf, inquiryStatusFromInt, resourceCategoryFromInt } from '../lib/enums';
+import { formatDateFull } from '../lib/format';
 
 // ---------------------------------------------------------------------------
 // Wire types for TripNest.Core responses (camelCase JSON; enums arrive as
@@ -176,6 +189,156 @@ export interface BlockedDateDto {
   reason?: string | null;
 }
 
+export interface AssistantReplyResponseDto {
+  answer: string;
+  escalated: boolean;
+  supportTicketId?: string | null;
+  supportConversationId?: string | null;
+}
+
+export interface AssistantHistoryItemDto {
+  id: string;
+  isFromUser: boolean;
+  content: string;
+  supportTicketId?: string | null;
+  createdAt: string;
+}
+
+export interface VerificationStatusResponseDto {
+  verificationId: string;
+  ghanaCardNumber: string;
+  status: number; // VerificationStatus: 0 NotStarted, 1 Pending, 2 Verified, 3 Rejected
+  faceMatchScore?: number | null;
+  livenessScore?: number | null;
+  failureReason?: string | null;
+  submittedAt: string;
+  reviewedAt?: string | null;
+}
+
+export interface ExchangePostResponseDto {
+  id: string;
+  authorId: string;
+  authorName?: string | null;
+  title: string;
+  body: string;
+  category: number; // ExchangeCategory: 0 Tips, 1 Suppliers, 2 Regulation, 3 Marketplace, 4 General
+  pinned: boolean;
+  replyCount: number;
+  createdAt: string;
+}
+
+export interface ExchangeReplyResponseDto {
+  id: string;
+  authorId: string;
+  authorName?: string | null;
+  body: string;
+  createdAt: string;
+}
+
+export interface ResourceResponseDto {
+  id: string;
+  title: string;
+  description: string;
+  category: number; // ResourceCategory: 0 Guide, 1 Policy, 2 Template, 3 Video
+  format: string;
+  url: string;
+  createdAt: string;
+}
+
+export interface LandlordBookingResponseDto {
+  bookingId: string;
+  propertyId: string;
+  listing?: string | null;
+  guest?: string | null;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  guests: number;
+  amount: number;
+  status: number; // BookingStatus
+  stage: string; // Upcoming | Active | Complete | Canceled
+}
+
+export interface GuestReviewItemDto {
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+}
+
+export interface ReservationDetailsResponseDto {
+  bookingId: string;
+  propertyId: string;
+  listing?: string | null;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  guests: number;
+  tripType: string;
+  bookedThrough: string;
+  status: number;
+  stage: string;
+  guestId: string;
+  guestName?: string | null;
+  guestTripNestId?: string | null;
+  nightlyRate: number;
+  netRevenue: number;
+  managementFeePercent: number;
+  managementFee: number;
+  ownerPayout: number;
+  guestReviews: GuestReviewItemDto[];
+}
+
+export interface LandlordTenantResponseDto {
+  tenantId: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  property?: string | null;
+  since: string;
+  leaseEnd: string;
+  monthlyRent: number;
+  standing: string; // current | ending-soon | overdue
+}
+
+export interface InquiryResponseDto {
+  inquiryId: string;
+  propertyId: string;
+  propertyTitle?: string | null;
+  guestName: string;
+  message: string;
+  status: number; // InquiryStatus: 0 New, 1 Replied, 2 Archived
+  createdAt: string;
+}
+
+export interface PaymentMethodResponseDto {
+  id: string;
+  provider: string;
+  maskedNumber: string;
+  channel: string; // momo | card
+  isPrimary: boolean;
+}
+
+export interface ReviewResponseDto {
+  reviewId: string;
+  reviewerId: string;
+  revieweeId: string;
+  propertyId: string;
+  rating: number;
+  comment: string;
+  type: number; // ReviewType: 0 Property, 1 Tenant, 2 Landlord
+  createdAt: string;
+}
+
+export interface ListingCopySuggestionDto {
+  title: string;
+  description: string;
+  highlights: string[];
+}
+
+export interface SuggestedReplyResponseDto {
+  reply: string;
+}
+
 // --- shared formatting helpers ----------------------------------------------
 
 const dateShort = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -255,10 +418,11 @@ export function mapBooking(dto: BookingResponseDto, property?: Property): Bookin
 
 function notificationType(dto: NotificationResponseDto): NotificationType {
   const entity = (dto.relatedEntityType ?? '').toLowerCase();
+  // Scam warnings arrive with no relatedEntityType; the title is the only signal.
+  if (entity.includes('safety') || entity.includes('alert') || dto.title.toLowerCase().includes('safety')) return 'safety';
   if (entity.includes('booking')) return 'booking';
   if (entity.includes('escrow') || entity.includes('receipt') || entity.includes('payment')) return 'payment';
   if (entity.includes('maintenance') || entity.includes('service')) return 'maintenance';
-  if (entity.includes('safety') || entity.includes('alert')) return 'safety';
   return 'message';
 }
 
@@ -344,6 +508,154 @@ const LISTING_STATUS: Record<number, ListingStatus> = {
 };
 
 const COVER_COLORS = ['#0f5132', '#1e3a8a', '#9d174d', '#7c2d12', '#155e75', '#4c1d95', '#92400e'];
+
+export function mapExchangePost(dto: ExchangePostResponseDto): ExchangePost {
+  const author = dto.authorName ?? `User ${dto.authorId.slice(0, 8)}`;
+  return {
+    id: dto.id,
+    author,
+    role: 'Host', // author roles aren't part of the exchange DTO
+    initials: initialsOf(author),
+    title: dto.title,
+    body: dto.body,
+    category: exchangeCategoryFromInt(dto.category),
+    replies: dto.replyCount,
+    createdAt: timeAgo(dto.createdAt),
+    pinned: dto.pinned,
+  };
+}
+
+export function mapExchangeReply(dto: ExchangeReplyResponseDto): ExchangeReply {
+  const author = dto.authorName ?? `User ${dto.authorId.slice(0, 8)}`;
+  return {
+    id: dto.id,
+    author,
+    initials: initialsOf(author),
+    body: dto.body,
+    createdAt: timeAgo(dto.createdAt),
+  };
+}
+
+export function mapResource(dto: ResourceResponseDto): Resource {
+  return {
+    id: dto.id,
+    title: dto.title,
+    description: dto.description,
+    category: resourceCategoryFromInt(dto.category),
+    format: dto.format,
+    url: assetUrl(dto.url),
+  };
+}
+
+const LANDLORD_BOOKING_STATUS: Record<number, LandlordBookingStatus> = {
+  0: 'pending',
+  1: 'confirmed',
+  2: 'checked-in',
+  3: 'completed', // CheckedOut
+  4: 'cancelled',
+  5: 'completed',
+};
+
+export function mapLandlordBooking(dto: LandlordBookingResponseDto): LandlordBooking {
+  return {
+    id: dto.bookingId,
+    guest: dto.guest ?? 'Guest',
+    listing: dto.listing ?? 'Listing',
+    checkIn: formatIsoDate(dto.checkIn),
+    checkOut: formatIsoDate(dto.checkOut),
+    nights: dto.nights,
+    guests: dto.guests,
+    amount: dto.amount,
+    status: LANDLORD_BOOKING_STATUS[dto.status] ?? 'pending',
+  };
+}
+
+const RESERVATION_STAGE: Record<string, ReservationStatus> = {
+  Upcoming: 'upcoming',
+  Active: 'upcoming',
+  Complete: 'complete',
+  Canceled: 'canceled',
+};
+
+/** Table row built from the bookings list; financials arrive with the details fetch. */
+export function mapReservationRow(dto: LandlordBookingResponseDto): Reservation {
+  return {
+    id: dto.bookingId,
+    property: dto.listing ?? 'Listing',
+    location: '',
+    status: RESERVATION_STAGE[dto.stage] ?? 'upcoming',
+    checkIn: formatIsoDate(dto.checkIn),
+    checkOut: formatIsoDate(dto.checkOut),
+    checkInFull: formatDateFull(dto.checkIn),
+    checkOutFull: formatDateFull(dto.checkOut),
+    nights: dto.nights,
+    guests: dto.guests,
+    nightlyRate: dto.nights > 0 ? Math.round(dto.amount / dto.nights) : dto.amount,
+    managementFeePercent: 0,
+    tripType: 'Reservation',
+    bookedThrough: 'TripNest',
+    reviews: [],
+  };
+}
+
+export function mapReservationDetails(dto: ReservationDetailsResponseDto): Reservation {
+  return {
+    id: dto.bookingId,
+    property: dto.listing ?? 'Listing',
+    location: '',
+    status: RESERVATION_STAGE[dto.stage] ?? 'upcoming',
+    checkIn: formatIsoDate(dto.checkIn),
+    checkOut: formatIsoDate(dto.checkOut),
+    checkInFull: formatDateFull(dto.checkIn),
+    checkOutFull: formatDateFull(dto.checkOut),
+    nights: dto.nights,
+    guests: dto.guests,
+    nightlyRate: dto.nightlyRate,
+    managementFeePercent: dto.managementFeePercent,
+    tripType: dto.tripType,
+    bookedThrough: dto.bookedThrough,
+    reviews: dto.guestReviews.map((r) => ({
+      name: dto.guestName ?? 'Guest',
+      date: formatIsoDate(r.createdAt),
+      stars: r.rating,
+      text: r.comment ?? '',
+    })),
+  };
+}
+
+export function mapLandlordTenant(dto: LandlordTenantResponseDto): LandlordTenant {
+  return {
+    id: dto.tenantId,
+    name: dto.name ?? 'Tenant',
+    property: dto.property ?? 'Property',
+    email: dto.email ?? '',
+    phone: dto.phone ?? '',
+    since: formatIsoDate(dto.since),
+    leaseEnd: formatIsoDate(dto.leaseEnd),
+    monthlyRent: dto.monthlyRent,
+    standing: (dto.standing as TenantStanding) || 'current',
+  };
+}
+
+export function mapPaymentMethod(dto: PaymentMethodResponseDto): PaymentMethod {
+  return {
+    id: dto.id,
+    provider: dto.provider,
+    number: dto.maskedNumber,
+    primary: dto.isPrimary,
+  };
+}
+
+export function mapInquiry(dto: InquiryResponseDto): Inquiry {
+  return {
+    id: dto.inquiryId,
+    guest: dto.guestName,
+    listing: dto.propertyTitle ?? 'Listing',
+    message: dto.message,
+    date: timeAgo(dto.createdAt),
+    status: inquiryStatusFromInt(dto.status),
+  };
+}
 
 export function mapListing(dto: PropertyResponseDto): Listing {
   let hash = 0;
