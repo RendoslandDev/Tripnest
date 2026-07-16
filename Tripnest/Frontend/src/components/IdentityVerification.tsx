@@ -28,9 +28,11 @@ const CARD_ID_PATTERN = /^GHA-\d{4}-\d{6}$/;
  */
 export default function IdentityVerification({
   onStateChange,
+  onSkip
 }: {
   /** Reports every observed state so hosts can react (e.g. unlock a Continue button). */
   onStateChange?: (state: VerificationState) => void;
+   onSkip?: () => void;
 }) {
   const session = useSession();
   const initial = useAsync(getVerificationStatus, []);
@@ -207,6 +209,16 @@ export default function IdentityVerification({
             <ShieldIcon size={15} />
             {submitting ? 'Submitting…' : state === 'rejected' ? 'Try again' : 'Verify my identity'}
           </button>
+                {onSkip && (
+                    <button
+                    type="button"
+                    onClick={onSkip}
+                    disabled={submitting}
+                    className="text-sm font-semibold text-muted transition-colors hover:text-ink disabled:opacity-40"
+                    >
+                    Skip for now
+                    </button>
+        )}
         </div>
       )}
     </div>
