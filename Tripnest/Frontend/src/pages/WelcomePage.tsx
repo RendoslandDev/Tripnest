@@ -177,7 +177,7 @@ export default function WelcomePage() {
             <div className="mt-3 flex items-center justify-center gap-3 text-xs text-muted">
               <span className="flex items-center gap-1"><ShieldIcon size={13} className="text-brand" /> Verified listings</span>
               <span className="flex items-center gap-1">
-                <StarIcon size={13} className="text-amber-400" /> 4.9 · 1,200+ homes
+                <StarIcon size={13} className="text-amber-400" /> Escrow-protected stays
               </span>
             </div>
           </div>

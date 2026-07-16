@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Conversation } from '../../types';
 import { getMessages, sendMessage, suggestReply } from '../../api/messages';
+import { mapMessage, timeAgo } from '../../api/backend';
+import { getSession } from '../../store/authStore';
+import {
+  joinConversation, onMessage, onPresence, onTyping, onStopTyping,
+  getPresence, sendTyping, sendStopTyping, type PresenceUpdate,
+} from '../../lib/chatHub';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../AsyncBoundary';
 import Card from '../ui/Card';
@@ -43,12 +49,14 @@ export default function ChatThread({ conversation, onBack, className = '' }: Cha
   const [sent, setSent] = useState<ChatItem[]>([]);
   const [showDetails, setShowDetails] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+  const [presence, setPresence] = useState<PresenceUpdate | null>(null);
+  const [partnerTyping, setPartnerTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Keep the latest message in view as the thread grows or switches.
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [sent, state.data]);
+  }, [sent, state.data, partnerTyping]);
 
   // Auto-dismiss the transient banner.
   useEffect(() => {
@@ -57,16 +65,77 @@ export default function ChatThread({ conversation, onBack, className = '' }: Cha
     return () => clearTimeout(t);
   }, [banner]);
 
+  // Live events for this conversation: incoming messages and typing signals.
+  useEffect(() => {
+    const convId = String(conversation.id);
+    let active = true;
+    void joinConversation(convId).catch(() => { /* REST history still renders */ });
+    const offMessage = onMessage((dto) => {
+      if (!active || dto.conversationId !== convId) return;
+      setPartnerTyping(false);
+      setSent((s) => {
+        if (s.some((m) => m.id === dto.messageId)) return s; // REST echo already shown
+        return [...s, mapMessage(dto, getSession()?.userId ?? '')];
+      });
+    });
+    const offTyping = onTyping((t) => { if (active && t.conversationId === convId) setPartnerTyping(true); });
+    const offStop = onStopTyping((t) => { if (active && t.conversationId === convId) setPartnerTyping(false); });
+    return () => { active = false; offMessage(); offTyping(); offStop(); };
+  }, [conversation.id]);
+
+  // Stuck "typing…" guard: hub sends StopTyping, but clear it locally too.
+  useEffect(() => {
+    if (!partnerTyping) return;
+    const t = setTimeout(() => setPartnerTyping(false), 6000);
+    return () => clearTimeout(t);
+  }, [partnerTyping]);
+
+  // Live presence of the counterpart. PresenceChanged pushes use SignalR's
+  // Clients.Users(), which Core's JWT never reaches (the token carries a raw
+  // "sub" claim and .NET 8 doesn't map it to NameIdentifier — see
+  // must_fix.md), so a light poll keeps the status honest; the subscription
+  // stays for whenever the server-side mapping is fixed.
+  useEffect(() => {
+    const other = conversation.otherUserId;
+    if (!other) return;
+    let active = true;
+    const pull = () => { void getPresence(other).then((p) => { if (active && p) setPresence(p); }); };
+    pull();
+    const poll = setInterval(pull, 20_000);
+    const off = onPresence((p) => { if (active && p.userId === other) setPresence(p); });
+    return () => { active = false; clearInterval(poll); off(); };
+  }, [conversation.otherUserId]);
+
+  // Throttled typing signals from the composer.
+  const lastTypingAt = useRef(0);
+  const stopTypingTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const handleTyping = () => {
+    const convId = String(conversation.id);
+    const now = Date.now();
+    if (now - lastTypingAt.current > 2500) {
+      lastTypingAt.current = now;
+      sendTyping(convId);
+    }
+    clearTimeout(stopTypingTimer.current);
+    stopTypingTimer.current = setTimeout(() => sendStopTyping(convId), 3000);
+  };
+
   const append = (item: Omit<ChatItem, 'id' | 'fromMe' | 'time'>) =>
     setSent((s) => [...s, { id: Date.now(), fromMe: true, time: 'Now', ...item }]);
 
   const send = async (text: string): Promise<boolean> => {
+    clearTimeout(stopTypingTimer.current);
+    sendStopTyping(String(conversation.id));
     // Optimistic bubble, reconciled with the saved message from the API.
     const tempId = `pending-${Date.now()}`;
     setSent((s) => [...s, { id: tempId, fromMe: true, time: 'Sending…', text }]);
     try {
       const saved = await sendMessage(conversation.id, text);
-      setSent((s) => s.map((m) => (m.id === tempId ? saved : m)));
+      setSent((s) => {
+        // The hub echo can land before the REST response — don't double up.
+        if (s.some((m) => m.id === saved.id)) return s.filter((m) => m.id !== tempId);
+        return s.map((m) => (m.id === tempId ? saved : m));
+      });
       return true;
     } catch {
       setSent((s) => s.filter((m) => m.id !== tempId));
@@ -76,6 +145,15 @@ export default function ChatThread({ conversation, onBack, className = '' }: Cha
   };
 
   const sentIds = new Set(sent.map((m) => m.id));
+  const statusLine = partnerTyping
+    ? 'typing…'
+    : presence
+      ? presence.isOnline
+        ? 'Online'
+        : presence.lastSeenAt
+          ? `Last seen ${timeAgo(presence.lastSeenAt)}`
+          : 'Offline'
+      : conversation.role;
 
   return (
     <Card className={`tn-card-in flex min-h-0 overflow-hidden ${className}`}>
@@ -94,11 +172,15 @@ export default function ChatThread({ conversation, onBack, className = '' }: Cha
           )}
           <div className="relative">
             <Avatar name={conversation.name} size={40} />
-            <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
+            {presence?.isOnline && (
+              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" />
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold text-ink">{conversation.name}</p>
-            <p className="text-xs text-emerald-600">Online · {conversation.role}</p>
+            <p className={`truncate text-xs ${partnerTyping ? 'font-medium text-brand' : presence?.isOnline ? 'text-emerald-600' : 'text-muted'}`}>
+              {statusLine}{statusLine === conversation.role ? '' : ` · ${conversation.role}`}
+            </p>
           </div>
           <HeaderAction label={`Call ${conversation.name}`} onClick={() => setBanner(`Calling ${conversation.name}…`)}>
             <PhoneIcon size={17} />
@@ -123,7 +205,11 @@ export default function ChatThread({ conversation, onBack, className = '' }: Cha
             <AsyncBoundary state={state} loadingMessage="Loading messages…" errorMessage="Failed to load messages.">
               {(history) => (
                 <div className="space-y-2.5">
-                  {[...history, ...(sent as ChatItem[])].map((m) => {
+                  {[
+                    ...history,
+                    // Live/optimistic items not already in the fetched history.
+                    ...(sent as ChatItem[]).filter((m) => !history.some((h) => h.id === m.id)),
+                  ].map((m) => {
                     const item = m as ChatItem;
                     return (
                       <div
@@ -163,6 +249,7 @@ export default function ChatThread({ conversation, onBack, className = '' }: Cha
           onAttach={(file) => append({ text: `📎 ${file.name}` })}
           onNotice={setBanner}
           suggest={() => suggestReply(conversation.id)}
+          onTyping={handleTyping}
         />
       </div>
 

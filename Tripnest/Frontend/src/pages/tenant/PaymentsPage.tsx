@@ -16,7 +16,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge, { type BadgeTone } from '../../components/ui/Badge';
 import { formatCedi } from '../../lib/format';
-import { currentUser } from '../../data/user';
+import { getSession } from '../../store/authStore';
 import {
   CalendarIcon,
   CardIcon,
@@ -305,7 +305,7 @@ function PaymentsView({
       const intent = await initiatePayment({
         amount: payment.amount,
         channel: channelFor(primary),
-        email: currentUser.email,
+        email: getSession()?.email ?? '',
       });
       const txn = await verifyPayment(intent.reference);
       if (txn.status !== 'success') throw new Error('Payment was not completed.');

@@ -11,7 +11,7 @@ interface LandlordStatsDto {
   totalProperties: number;
   activeProperties: number;
   totalBookings: number;
-  activeBookings: number;
+   activeBookings: number;
   completedBookings: number;
 }
 

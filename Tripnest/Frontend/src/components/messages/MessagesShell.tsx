@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { Conversation } from '../../types';
 import { markConversationRead } from '../../api/messages';
+import { getSession } from '../../store/authStore';
+import { joinConversation, onMessage } from '../../lib/chatHub';
 import Card from '../ui/Card';
 import { ChatIcon } from '../tenant/icons';
 import ConversationList from './ConversationList';
@@ -42,6 +44,28 @@ export default function MessagesShell({ conversations, basePath }: MessagesShell
     if (selected) clearUnread(String(selected.id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
+
+  // Live sidebar: join every conversation's hub group (idempotent) and fold
+  // incoming messages into the list — preview, timestamp and unread pill.
+  useEffect(() => {
+    let active = true;
+    conversations.forEach((c) => void joinConversation(String(c.id)).catch(() => {}));
+    const off = onMessage((dto) => {
+      if (!active) return;
+      const me = getSession()?.userId ?? '';
+      setRows((rs) => rs.map((c) => {
+        if (String(c.id) !== dto.conversationId) return c;
+        const isOpen = conversationId === dto.conversationId;
+        return {
+          ...c,
+          lastMessage: dto.content,
+          time: 'Just now',
+          unread: dto.senderId === me || isOpen ? c.unread : c.unread + 1,
+        };
+      }));
+    });
+    return () => { active = false; off(); };
+  }, [conversations, conversationId]);
 
   const open = (id: string) => {
     clearUnread(id);

@@ -1,6 +1,6 @@
 import type { Conversation } from '../../types';
 import Avatar from '../ui/Avatar';
-import { PhoneIcon, ShieldIcon, StarIcon } from '../tenant/icons';
+import { PhoneIcon, ShieldIcon } from '../tenant/icons';
 
 /** Right-hand details panel for the open conversation (lg screens only). */
 export default function ThreadDetails({ conversation, onCall }: {
@@ -15,9 +15,6 @@ export default function ThreadDetails({ conversation, onCall }: {
       <div className="mt-4 space-y-2 text-left">
         <p className="flex items-center gap-2 text-sm text-ink">
           <ShieldIcon size={15} className="text-brand" /> Verified {conversation.role.toLowerCase()}
-        </p>
-        <p className="flex items-center gap-2 text-sm text-ink">
-          <StarIcon size={15} className="text-amber-400" /> 4.9 · responds in ~1h
         </p>
       </div>
       <button

@@ -10,7 +10,6 @@ import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import Toggle from '../../components/ui/Toggle';
 import { formatCedi } from '../../lib/format';
-import { currentUser } from '../../data/user';
 import { useSession } from '../../store/authStore';
 import {
   CalendarIcon, CardIcon, HeartIcon, ToolIcon, SearchIcon, PlusIcon, MessageIcon, BellIcon,
@@ -39,12 +38,12 @@ function Stat({ label, value, icon }: { label: string; value: string; icon: Reac
 
 function Dashboard({ data }: { data: TenantDashboard }) {
   const session = useSession();
-  const firstName = (session?.name ?? currentUser.name).split(' ')[0];
+  const firstName = (session?.name ?? 'there').split(' ')[0];
   const [smsOn, setSmsOn] = useState(true);
   const [invited, setInvited] = useState(false);
 
   const invite = () => {
-    const link = `${window.location.origin}/?ref=${encodeURIComponent(currentUser.name.split(' ')[0].toLowerCase())}`;
+    const link = `${window.location.origin}/?ref=${encodeURIComponent(firstName.toLowerCase())}`;
     navigator.clipboard?.writeText(link).catch(() => {});
     setInvited(true);
     setTimeout(() => setInvited(false), 2500);

@@ -34,7 +34,7 @@ export const TENANT_NAV: TenantNavGroup[] = [
       { label: 'Messages', path: '/messages', icon: <MessageIcon /> },
       { label: 'Agreements', path: '/agreements', icon: <FileIcon /> },
       { label: 'Payments', path: '/payments', icon: <CardIcon /> },
-      { label: 'Notifications', path: '/notifications', icon: <BellIcon />, badge: 6 },
+      { label: 'Notifications', path: '/notifications', icon: <BellIcon /> },
     ],
   },
   {
@@ -58,3 +58,8 @@ export const TENANT_NAV: TenantNavGroup[] = [
 
 /** Flat list of all tenant nav items, for route generation. */
 export const TENANT_NAV_ITEMS: TenantNavItem[] = TENANT_NAV.flatMap((g) => g.items);
+
+// Pages whose APIs are Tenant-role-only (personal dashboard, maintenance/mine).
+// Routes gate them with RequireAuth role="tenant" and the sidebar hides them
+// from other signed-in roles so nobody clicks into a redirect.
+export const TENANT_ROLE_PATHS = new Set(['/overview', '/maintenance']);

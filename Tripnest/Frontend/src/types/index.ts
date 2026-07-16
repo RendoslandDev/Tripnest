@@ -142,6 +142,8 @@ export interface Conversation {
   lastMessage: string;
   time: string;
   unread: number;
+  /** Counterpart's user id — powers live presence over the chat hub. */
+  otherUserId?: string;
 }
 
 export interface ChatMessage {

@@ -1,7 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { TENANT_NAV } from './navConfig';
-import { HexIcon, ChevronDownIcon } from './icons';
+import { TENANT_NAV, TENANT_ROLE_PATHS } from './navConfig';
+import { HexIcon, ChevronDownIcon, GridIcon } from './icons';
 import { useSession } from '../../store/authStore';
+import { homeForRole, profilePathForRole } from '../../lib/roleHome';
+import { getUnreadCountCached } from '../../api/notifications';
+import { useAsync } from '../../hooks/useAsync';
 import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
 
@@ -20,6 +23,25 @@ const activeItem = 'bg-brand-50 text-brand';
 export default function TenantSidebar({ open, onClose, desktopHidden = false }: TenantSidebarProps) {
   const session = useSession();
   const name = session?.name ?? 'Guest';
+
+  // Non-tenant roles browsing the marketplace don't get the tenant-role-only
+  // pages (their APIs 403 for them) — they get a link back to their workspace.
+  const isOtherRole = session != null && session.role !== 'tenant';
+  const nav = isOtherRole
+    ? TENANT_NAV
+        .map((g) => ({ ...g, items: g.items.filter((i) => !TENANT_ROLE_PATHS.has(i.path)) }))
+        .filter((g) => g.items.length > 0)
+    : TENANT_NAV;
+  const roleLabel = session ? session.role.charAt(0).toUpperCase() + session.role.slice(1) : 'Browse as guest';
+
+  // Live unread count for the Notifications badge (signed-in users only).
+  const unread = useAsync(
+    () => (session ? getUnreadCountCached(session.userId) : Promise.resolve(0)),
+    [session?.userId],
+  );
+  const badgeFor = (path: string): number | undefined =>
+    path === '/notifications' && unread.data ? unread.data : undefined;
+
   return (
     <>
       {open && (
@@ -45,7 +67,17 @@ export default function TenantSidebar({ open, onClose, desktopHidden = false }: 
         </div>
 
         <nav className="flex flex-col gap-1">
-          {TENANT_NAV.map((group, gi) => (
+          {isOtherRole && (
+            <NavLink
+              to={homeForRole(session.role)}
+              onClick={onClose}
+              className={`${baseItem} ${inactiveItem}`}
+            >
+              <span className="flex shrink-0 items-center justify-center"><GridIcon /></span>
+              <span className="flex-1">My workspace</span>
+            </NavLink>
+          )}
+          {nav.map((group, gi) => (
             <div key={gi}>
               {group.heading && (
                 <p className="px-3 pt-5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
@@ -64,9 +96,9 @@ export default function TenantSidebar({ open, onClose, desktopHidden = false }: 
                 >
                   <span className="flex shrink-0 items-center justify-center">{item.icon}</span>
                   <span className="flex-1">{item.label}</span>
-                  {item.badge != null && (
+                  {(item.badge ?? badgeFor(item.path)) != null && (
                     <span className="rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-white">
-                      {item.badge}
+                      {item.badge ?? badgeFor(item.path)}
                     </span>
                   )}
                 </NavLink>
@@ -82,7 +114,7 @@ export default function TenantSidebar({ open, onClose, desktopHidden = false }: 
               Create a landlord account and start earning today!
             </p>
             <NavLink to="/welcome" onClick={onClose} className="no-underline">
-              <Button className="mt-3 bg-white text-brand hover:bg-white/90" size="sm">
+              <Button className="mt-3 bg-white! text-brand! hover:bg-white/90!" size="sm">
                 Get Started
               </Button>
             </NavLink>
@@ -90,14 +122,14 @@ export default function TenantSidebar({ open, onClose, desktopHidden = false }: 
         )}
 
         <NavLink
-          to={session ? '/profile' : '/welcome'}
+          to={session ? profilePathForRole(session.role) : '/welcome'}
           onClick={onClose}
           className="mt-4 flex w-full items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 text-left no-underline"
         >
           <Avatar name={name} size={36} />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-semibold text-ink">{session ? name : 'Sign in'}</span>
-            <span className="block text-xs text-muted">{session ? 'Tenant' : 'Browse as guest'}</span>
+            <span className="block text-xs text-muted">{roleLabel}</span>
           </span>
           <ChevronDownIcon size={16} className="text-muted" />
         </NavLink>

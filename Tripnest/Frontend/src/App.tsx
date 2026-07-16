@@ -5,6 +5,7 @@ import LandlordLayout from './layouts/LandlordLayout';
 import RequireAuth from './components/RequireAuth';
 import { useSession } from './store/authStore';
 import WelcomePage from './pages/WelcomePage';
+import GetVerifiedPage from './pages/GetVerifiedPage';
 import LandlordHome from './pages/landlord/LandlordHome';
 import EarningsPage from './pages/landlord/EarningsPage';
 import LandlordListingsPage from './pages/landlord/ListingsPage';
@@ -17,7 +18,7 @@ import LandlordSettingsPage from './pages/landlord/SettingsPage';
 import LandlordHelpPage from './pages/landlord/HelpPage';
 import PagePlaceholder from './components/PagePlaceholder';
 import type { ReactNode } from 'react';
-import { TENANT_NAV_ITEMS } from './components/tenant/navConfig';
+import { TENANT_NAV_ITEMS, TENANT_ROLE_PATHS } from './components/tenant/navConfig';
 import { lazy, Suspense } from 'react';
 import HomePage from './pages/tenant/HomePage';
 import SearchPage from './pages/tenant/SearchPage';
@@ -41,6 +42,20 @@ import TenantDashboardPage from './pages/tenant/DashboardPage';
 import ProfilePage from './pages/tenant/ProfilePage';
 import SettingsPage from './pages/tenant/SettingsPage';
 import HelpPage from './pages/tenant/HelpPage';
+import RoleWorkspaceLayout from './layouts/RoleWorkspaceLayout';
+import WorkspaceMessagesPage from './components/workspace/WorkspaceMessagesPage';
+import { AGENT_NAV, CARETAKER_NAV, ADMIN_NAV } from './components/workspace/roleNavs';
+import AgentHomePage from './pages/agent/AgentHomePage';
+import WalkthroughReviewPage from './pages/agent/WalkthroughReviewPage';
+import ViewingRequestsPage from './pages/agent/ViewingRequestsPage';
+import AgentProfilePage from './pages/agent/AgentProfilePage';
+import CaretakerHomePage from './pages/caretaker/CaretakerHomePage';
+import ServiceRequestsPage from './pages/caretaker/ServiceRequestsPage';
+import AdminHomePage from './pages/admin/AdminHomePage';
+import DisputesPage from './pages/admin/DisputesPage';
+import SupportTicketsPage from './pages/admin/SupportTicketsPage';
+import AuditLogsPage from './pages/admin/AuditLogsPage';
+import { homeForRole } from './lib/roleHome';
 import OverviewPage from './pages/OverviewPage';
 import ReservationPage from './pages/ReservationPage';
 import CalendarPage from './pages/CalendarPage';
@@ -56,7 +71,9 @@ import ResourcesPage from './pages/ResourcesPage';
 /** Visitors are onboarded through Explore first; signed-in users get their home. */
 function Landing() {
   const session = useSession();
-  return session ? <HomePage /> : <Navigate to="/explore" replace />;
+  if (!session) return <Navigate to="/explore" replace />;
+  const home = homeForRole(session.role);
+  return home === '/' ? <HomePage /> : <Navigate to={home} replace />;
 }
 
 const TENANT_PAGES: Record<string, ReactNode> = {
@@ -103,6 +120,7 @@ export default function App() {
         {/* Onboarding: Explore introduces TripNest, then hands off to auth */}
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/welcome" element={<WelcomePage />} />
+        <Route path="/get-verified" element={<RequireAuth><GetVerifiedPage /></RequireAuth>} />
 
         {/* Tenant marketplace — browsing is public; personal pages need a login */}
         <Route path="/" element={<MarketplaceLayout />}>
@@ -111,7 +129,11 @@ export default function App() {
               <PagePlaceholder title={item.label} />
             );
             if (AUTH_ONLY_TENANT_PATHS.has(item.path)) {
-              element = <RequireAuth>{element}</RequireAuth>;
+              element = (
+                <RequireAuth role={TENANT_ROLE_PATHS.has(item.path) ? 'tenant' : undefined}>
+                  {element}
+                </RequireAuth>
+              );
             }
             return item.path === '/' ? (
               <Route key={item.path} index element={element} />
@@ -126,8 +148,9 @@ export default function App() {
           <Route path="payment/callback" element={<RequireAuth><PaymentCallbackPage /></RequireAuth>} />
         </Route>
 
-        {/* Landlord marketplace — only landlord accounts */}
-        <Route path="/landlord" element={<RequireAuth role="landlord"><LandlordLayout /></RequireAuth>}>
+        {/* Landlord marketplace — only landlord accounts. Like all Core-gated roles
+            (Landlord/Agent/Caretaker), hosting requires a verified identity. */}
+        <Route path="/landlord" element={<RequireAuth role="landlord" verified><LandlordLayout /></RequireAuth>}>
           <Route index element={<LandlordHome />} />
           <Route path="reservations" element={<ReservationPage />} />
           <Route path="calendar" element={<CalendarPage />} />
@@ -145,8 +168,56 @@ export default function App() {
           <Route path="help" element={<LandlordHelpPage />} />
         </Route>
 
+        {/* Role workspaces — where homeForRole sends agents, caretakers and admins */}
+        <Route
+          path="/agent"
+          element={
+            <RequireAuth role="agent" verified>
+              <RoleWorkspaceLayout nav={AGENT_NAV} roleLabel="Agent" accountPath="/agent/profile" />
+            </RequireAuth>
+          }
+        >
+          <Route index element={<AgentHomePage />} />
+          <Route path="walkthroughs" element={<WalkthroughReviewPage />} />
+          <Route path="viewings" element={<ViewingRequestsPage />} />
+          <Route path="messages" element={<WorkspaceMessagesPage basePath="/agent/messages" subtitle="Chat with tenants about viewings and walkthroughs." />} />
+          <Route path="messages/:conversationId" element={<WorkspaceMessagesPage basePath="/agent/messages" subtitle="Chat with tenants about viewings and walkthroughs." />} />
+          <Route path="profile" element={<AgentProfilePage />} />
+        </Route>
+        <Route
+          path="/caretaker"
+          element={
+            <RequireAuth role="caretaker" verified>
+              <RoleWorkspaceLayout nav={CARETAKER_NAV} roleLabel="Caretaker" accountPath="/caretaker" />
+            </RequireAuth>
+          }
+        >
+          <Route index element={<CaretakerHomePage />} />
+          <Route path="requests" element={<ServiceRequestsPage />} />
+          <Route path="messages" element={<WorkspaceMessagesPage basePath="/caretaker/messages" subtitle="Chat with tenants and landlords about your assignments." />} />
+          <Route path="messages/:conversationId" element={<WorkspaceMessagesPage basePath="/caretaker/messages" subtitle="Chat with tenants and landlords about your assignments." />} />
+        </Route>
+        {/* Admins are exempt from identity verification (Core's RequireVerified
+            gates Landlord/Agent/Caretaker only). */}
+        <Route
+          path="/admin"
+          element={
+            <RequireAuth role="admin">
+              <RoleWorkspaceLayout nav={ADMIN_NAV} roleLabel="Admin" accountPath="/admin" />
+            </RequireAuth>
+          }
+        >
+          <Route index element={<AdminHomePage />} />
+          <Route path="disputes" element={<DisputesPage />} />
+          <Route path="tickets" element={<SupportTicketsPage />} />
+          <Route path="walkthroughs" element={<WalkthroughReviewPage />} />
+          <Route path="messages" element={<WorkspaceMessagesPage basePath="/admin/messages" subtitle="Chat with users about escalations and disputes." />} />
+          <Route path="messages/:conversationId" element={<WorkspaceMessagesPage basePath="/admin/messages" subtitle="Chat with users about escalations and disputes." />} />
+          <Route path="audit" element={<AuditLogsPage />} />
+        </Route>
+
         {/* Host management dashboard — landlord-only */}
-        <Route path="/dashboard" element={<RequireAuth role="landlord"><DashboardLayout /></RequireAuth>}>
+        <Route path="/dashboard" element={<RequireAuth role="landlord" verified><DashboardLayout /></RequireAuth>}>
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<OverviewPage />} />
           <Route path="reservations" element={<ReservationPage />} />

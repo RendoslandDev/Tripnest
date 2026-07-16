@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { currentUser } from '../../data/user';
 import { useSession, updateSession } from '../../store/authStore';
 import { getMyProfile, updateMyProfile, uploadProfilePhoto } from '../../api/profile';
 import { cacheProfilePhoto, getCachedProfilePhoto } from '../../lib/profilePhoto';
@@ -10,7 +9,7 @@ import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
 import ContactVerification from '../../components/ContactVerification';
 import {
-  ShieldIcon, CheckIcon, StarIcon, MapPinIcon, MailIcon, PhoneIcon, BadgeIcon, ClockIcon,
+  ShieldIcon, CheckIcon, StarIcon, MapPinIcon, MailIcon, PhoneIcon, BadgeIcon,
 } from '../../components/tenant/icons';
 
 function Field({ label, value, onChange, type = 'text', disabled = false, hint }: {
@@ -48,14 +47,9 @@ function VerifiedChip({ label }: { label: string }) {
   );
 }
 
-const REVIEWS = [
-  { id: 1, name: 'Kwame Mensah', role: 'Agent', date: 'May 2025', text: 'Great communicator and respectful of the property. Would happily host again!' },
-  { id: 2, name: 'Nana Adwoa', role: 'Caretaker', date: 'Apr 2025', text: 'Easy check-in and left the place spotless. A model TripNest guest.' },
-];
-
 export default function ProfilePage() {
   const session = useSession();
-  const roleLabel = session ? session.role[0].toUpperCase() + session.role.slice(1) : currentUser.role;
+  const roleLabel = session ? session.role[0].toUpperCase() + session.role.slice(1) : 'Guest';
 
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -64,15 +58,17 @@ export default function ProfilePage() {
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
-  const baseName = session?.name ?? currentUser.name;
+  const baseName = session?.name ?? 'Guest';
+  // Location/work/languages are local flourishes with no backend field — they
+  // start empty and only render once the user fills them in.
   const [form, setForm] = useState({
     name: baseName,
-    email: session?.email ?? currentUser.email,
+    email: session?.email ?? '',
     phone: '',
-    location: currentUser.location,
-    work: 'Student at UMaT',
-    languages: 'English, Twi',
-    bio: `Hi, I'm ${baseName.split(' ')[0]}!  |\n I'm on TripNest to find safe, verified homes and connect with trusted hosts across Ghana.`,
+    location: '',
+    work: '',
+    languages: '',
+    bio: '',
   });
 
   // Seed the editable fields from the live profile (phone/bio live server-side).
@@ -178,18 +174,20 @@ export default function ProfilePage() {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-2xl font-bold text-ink sm:text-3xl">{form.name}</h1>
-                <Badge tone="green">✓ Verified</Badge>
+                {session?.verified ? (
+                  <Badge tone="green">✓ Verified</Badge>
+                ) : (
+                  <Badge tone="gray">Not verified</Badge>
+                )}
               </div>
-              <p className="mt-0.5 text-muted">{roleLabel} · {form.location}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink">
-                <span className="flex items-center gap-1 font-semibold">
-                  <StarIcon size={15} className="text-amber-400" /> 4.9 rating
-                </span>
-                <span className="text-muted">12 reviews</span>
-                <span className="flex items-center gap-1 text-muted">
-                  <ClockIcon size={14} /> Joined 2025
-                </span>
-              </div>
+              <p className="mt-0.5 text-muted">{roleLabel}{form.location ? ` · ${form.location}` : ''}</p>
+              {session?.tripNestId && (
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink">
+                  <span className="flex items-center gap-1 text-muted">
+                    <ShieldIcon size={14} /> TripNest ID {session.tripNestId}
+                  </span>
+                </div>
+              )}
               {saved && <p className="mt-2 text-sm font-medium text-brand">Profile updated</p>}
             </div>
             {!editing && (
@@ -232,13 +230,15 @@ export default function ProfilePage() {
           <>
             <Card className="p-6">
               <h2 className="text-xl font-bold text-ink">About {firstName}</h2>
-              <p className="mt-3 text-ink">{form.bio}</p>
+              <p className="mt-3 text-ink">
+                {form.bio || 'No bio yet — use “Edit profile” to introduce yourself.'}
+              </p>
               <div className="mt-4 grid grid-cols-1 gap-x-8 border-t border-gray-100 pt-3 sm:grid-cols-2">
-                <InfoItem icon={<MapPinIcon size={18} />} label={`Lives in ${form.location}`} />
-                <InfoItem icon={<BadgeIcon size={18} />} label={`Speaks ${form.languages}`} />
-                <InfoItem icon={<ShieldIcon size={18} />} label={form.work} />
-                <InfoItem icon={<MailIcon size={18} />} label={form.email} />
-                <InfoItem icon={<PhoneIcon size={18} />} label={form.phone} />
+                {form.location && <InfoItem icon={<MapPinIcon size={18} />} label={`Lives in ${form.location}`} />}
+                {form.languages && <InfoItem icon={<BadgeIcon size={18} />} label={`Speaks ${form.languages}`} />}
+                {form.work && <InfoItem icon={<ShieldIcon size={18} />} label={form.work} />}
+                {form.email && <InfoItem icon={<MailIcon size={18} />} label={form.email} />}
+                {form.phone && <InfoItem icon={<PhoneIcon size={18} />} label={form.phone} />}
               </div>
             </Card>
 
@@ -269,20 +269,11 @@ export default function ProfilePage() {
               <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">
                 <StarIcon size={18} className="text-amber-400" /> What hosts say about {firstName}
               </h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {REVIEWS.map((r) => (
-                  <Card key={r.id} className="p-5">
-                    <p className="text-sm text-ink">"{r.text}"</p>
-                    <div className="mt-4 flex items-center gap-3">
-                      <Avatar name={r.name} size={40} />
-                      <div>
-                        <p className="text-sm font-semibold text-ink">{r.name}</p>
-                        <p className="text-xs text-muted">{r.role} · {r.date}</p>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+              <Card className="border-dashed p-8 text-center">
+                <p className="text-sm text-muted">
+                  No host reviews yet — they appear here after your completed stays.
+                </p>
+              </Card>
             </section>
           </>
         )}

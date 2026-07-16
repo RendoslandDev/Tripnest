@@ -330,13 +330,13 @@ function Home({ data }: { data: OverviewData }) {
           <EarningsCard earnings={earnings} />
           <QuickActionsCard />
 
-          <Card className="border-ink bg-ink p-5 text-white">
+          <Card className="border-ink! bg-ink! p-5 text-white">
             <h3 className="font-bold">Grow your portfolio</h3>
             <p className="mt-1 text-sm text-white/70">
               Verified listings get 3× more inquiries. Add your next property today.
             </p>
             <Link to="/landlord/listings" className="no-underline">
-              <Button className="mt-3 rounded-xl bg-white text-ink hover:bg-white/90" size="sm">
+              <Button className="mt-3 rounded-xl bg-white! text-ink! hover:bg-white/90!" size="sm">
                 List a property
               </Button>
             </Link>

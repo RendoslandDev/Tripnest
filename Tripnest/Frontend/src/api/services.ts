@@ -1,12 +1,12 @@
 import type { ServiceProvider } from '../types';
-import { providers as mockProviders } from '../data/providers';
 import { apiGet, apiPost } from './client';
+import { getProperties } from './properties';
 
 // ---------------------------------------------------------------------------
-// Service directory (Caretakers / House Help / Agents). Live agents and
-// caretakers come from TripNest.Core and carry a userId, which unlocks the
-// real request + chat flows; the mock entries stay as directory filler and
-// have no userId. House Help has no backend concept yet, so it is mock-only.
+// Service directory (Caretakers / House Help / Agents). Agents and caretakers
+// come from TripNest.Core and carry a userId, which unlocks the real request +
+// chat flows. House Help has no backend concept yet, so that directory shows
+// its empty state until Core grows one.
 // ---------------------------------------------------------------------------
 
 interface AgentDto {
@@ -67,7 +67,8 @@ function mapAgent(dto: AgentDto): ServiceProvider {
     name: `Verified Agent · ${dto.licenseNumber}`,
     category: 'Agents',
     role: dto.yearsOfExperience ? `${dto.yearsOfExperience} yrs experience` : 'Verified Agent',
-    location: 'Tarkwa, Ghana',
+    // Agent DTOs carry no location — the directory shows the service area.
+    location: 'Ghana',
     rating: 0,
     reviews: 0,
     verified: true,
@@ -78,14 +79,14 @@ function mapAgent(dto: AgentDto): ServiceProvider {
   };
 }
 
-function mapCaretaker(dto: CaretakerDto): ServiceProvider {
+function mapCaretaker(dto: CaretakerDto, location?: string): ServiceProvider {
   return {
     id: dto.caretakerId,
     userId: dto.userId,
     name: 'Property Caretaker',
     category: 'Caretakers',
     role: 'Resident caretaker',
-    location: 'Tarkwa, Ghana',
+    location: location ?? 'Ghana',
     rating: 0,
     reviews: 0,
     verified: true,
@@ -125,23 +126,26 @@ async function liveProviders(category: string): Promise<ServiceProvider[]> {
       return dtos.map(mapAgent);
     }
     if (category === 'Caretakers') {
-      const dtos = await apiGet<CaretakerDto[]>('/api/caretakers');
-      return dtos.map(mapCaretaker);
+      // A caretaker's location is their assigned property's location.
+      const [dtos, properties] = await Promise.all([
+        apiGet<CaretakerDto[]>('/api/caretakers'),
+        getProperties().catch(() => []),
+      ]);
+      const locations = new Map(properties.map((p) => [p.id, p.location]));
+      return dtos.map((dto) => mapCaretaker(dto, locations.get(dto.propertyId)));
     }
   } catch {
-    // API down or empty — the mock entries below keep the directory usable.
+    // API down — the directory shows its empty state rather than fake people.
   }
   return [];
 }
 
 export async function getProviders(category: string): Promise<ServiceProvider[]> {
-  const live = await liveProviders(category);
-  const mocks = mockProviders.filter((p) => p.category === category);
-  return [...live, ...mocks];
+  return liveProviders(category);
 }
 
 export async function getProviderById(id: string): Promise<ServiceProvider | undefined> {
-  for (const category of ['Caretakers', 'House Help', 'Agents']) {
+  for (const category of ['Caretakers', 'Agents']) {
     const rows = await getProviders(category);
     const found = rows.find((p) => p.id === id);
     if (found) return found;

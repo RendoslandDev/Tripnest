@@ -1,5 +1,4 @@
 import type { HotspotCategory, PropertyTour, TourChapter, TourRoom, TourSegment } from '../types';
-import { properties } from '../data/properties';
 import { buildTour } from '../data/tours';
 import { getPropertyById } from './properties';
 import { getClipsForProperty } from '../lib/clipStore';
@@ -8,9 +7,10 @@ import type { PropertyTourResponseDto, TourRoomDto } from './backend';
 
 // Service layer for property virtual tours. The tour is derived from the
 // property (walkthrough video metadata, including generation status, rides
-// inside PropertyTour). Live listings are fetched from the backend so their
-// uploaded photos feed the walkthrough; demo listings fall back to mock data.
-// Veo-generated clips stored in this browser upgrade photo rooms to video.
+// inside PropertyTour). Listings are fetched from the backend so their
+// uploaded photos feed the walkthrough; a landlord-authored tour wins over
+// the synthesized rooms. Veo-generated clips stored in this browser upgrade
+// photo rooms to video.
 
 // Blob object URLs handed out per tour, so VirtualTour can release them on
 // close instead of leaking one URL per generated clip per open.
@@ -73,7 +73,7 @@ export function saveAuthoredTour(
 }
 
 export async function getPropertyTour(id: string): Promise<PropertyTour | undefined> {
-  const property = (await getPropertyById(id)) ?? properties.find((p) => p.id === id);
+  const property = await getPropertyById(id);
   if (!property) return undefined;
   const tour = buildTour(property);
 

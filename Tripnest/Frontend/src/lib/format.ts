@@ -1,11 +1,11 @@
-const usd = new Intl.NumberFormat('en-US', {
+const cedi = new Intl.NumberFormat('en-GH', {
   style: 'currency',
-  currency: 'USD',
+  currency: 'GHS',
 });
 
-/** Format a number as USD, e.g. 1265.77 -> "$1,265.77". */
+/** Format a number as Ghana Cedi with pesewas, e.g. 1265.77 -> "GH₵1,265.77". */
 export function formatCurrency(value: number): string {
-  return usd.format(value);
+  return cedi.format(value);
 }
 
 /** Format a number as Ghana Cedi, e.g. 1200 -> "GH₵ 1,200". */

@@ -295,8 +295,8 @@ function Hero() {
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-white/80">
             <span className="flex items-center gap-1.5"><ShieldIcon size={14} /> Ghana Card verified hosts</span>
             <span className="flex items-center gap-1.5"><CardIcon size={14} /> Escrow-protected payments</span>
-            <span className="flex items-center gap-1.5"><MapPinIcon size={14} /> 18+ cities across Ghana</span>
-            <span className="flex items-center gap-1.5"><StarIcon size={14} className="text-amber-300" /> 4.9 · 1,200+ homes</span>
+            <span className="flex items-center gap-1.5"><MapPinIcon size={14} /> Homes across Ghana</span>
+            <span className="flex items-center gap-1.5"><StarIcon size={14} className="text-amber-300" /> Identity-checked community</span>
           </div>
         </Reveal>
       </div>

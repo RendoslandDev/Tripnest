@@ -10,7 +10,7 @@ export async function getListings(): Promise<Listing[]> {
 export interface NewListingInput {
   title: string;
   description: string;
-  location: string;
+  location: string; 
   bedrooms: number;
   bathrooms: number;
   monthlyRent: number;

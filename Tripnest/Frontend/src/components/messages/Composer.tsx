@@ -12,10 +12,12 @@ interface ComposerProps {
   onNotice: (message: string) => void;
   /** When provided, an AI button fills the draft with a suggested reply to edit. */
   suggest?: () => Promise<string>;
+  /** Fired as the user types, for live typing indicators. */
+  onTyping?: () => void;
 }
 
 /** Message composer: text draft, file attach, and voice-note recording. */
-export default function Composer({ onSendText, onSendVoice, onAttach, onNotice, suggest }: ComposerProps) {
+export default function Composer({ onSendText, onSendVoice, onAttach, onNotice, suggest, onTyping }: ComposerProps) {
   const [draft, setDraft] = useState('');
   const [recording, setRecording] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
@@ -140,7 +142,7 @@ export default function Composer({ onSendText, onSendVoice, onAttach, onNotice, 
             <input
               ref={inputRef}
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => { setDraft(e.target.value); if (e.target.value) onTyping?.(); }}
               onKeyDown={(e) => { if (e.key === 'Enter') void send(); }}
               placeholder="Type a message…"
               className="w-full bg-transparent px-1 py-1.5 text-sm text-ink outline-none placeholder:text-muted"

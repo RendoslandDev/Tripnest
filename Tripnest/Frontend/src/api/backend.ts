@@ -558,6 +558,7 @@ export function mapConversation(dto: ConversationResponseDto, myUserId: string):
     lastMessage: '',
     time: dto.lastMessageAt ? timeAgo(dto.lastMessageAt) : timeAgo(dto.createdAt),
     unread: 0,
+    otherUserId: otherId,
   };
 }
 

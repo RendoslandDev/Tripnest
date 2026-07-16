@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiUpload } from './client';
+import { apiDelete, apiGet, apiPatch, apiUpload } from './client';
 
 // Walkthrough video endpoints on TripNest.Core. Quirks the UI must respect:
 // video bytes are unreachable today (no static serving / streaming endpoint),
@@ -39,4 +39,29 @@ export function uploadWalkthrough(
 
 export function deleteWalkthrough(propertyId: string, walkthroughId: string): Promise<unknown> {
   return apiDelete(`/api/properties/${propertyId}/walkthroughs/${walkthroughId}`);
+}
+
+// --- Review queue (Agent/Admin) ---
+
+/** WalkthroughStatus enum, serialized as a number like every backend enum. */
+export const WALKTHROUGH_STATUS_LABELS = ['Not submitted', 'Pending review', 'Approved', 'Rejected'] as const;
+
+export interface PropertyWalkthroughStatusDto {
+  propertyId: string;
+  walkthroughStatus: number; // index into WALKTHROUGH_STATUS_LABELS
+  videoPath?: string | null;
+  rejectionReason?: string | null;
+  reviewedAt?: string | null;
+}
+
+export function getPendingWalkthroughs(): Promise<PropertyWalkthroughStatusDto[]> {
+  return apiGet<PropertyWalkthroughStatusDto[]>('/api/properties/pending-walkthroughs');
+}
+
+export function reviewWalkthrough(
+  propertyId: string,
+  approved: boolean,
+  rejectionReason?: string,
+): Promise<unknown> {
+  return apiPatch(`/api/properties/${propertyId}/walkthrough/review`, { approved, rejectionReason });
 }

@@ -127,6 +127,9 @@ export async function register(input: RegisterInput): Promise<Session> {
 export function signOut(): void {
   // Best-effort server-side refresh-token revocation; local state clears regardless.
   apiPost('/api/auth/logout').catch(() => { /* already signed out server-side */ });
+  // Close the chat socket so the next sign-in gets a fresh authenticated one.
+  // Dynamic import keeps the SignalR client out of the auth bundle path.
+  void import('../lib/chatHub').then((m) => m.disconnectChat()).catch(() => {});
   setTokens(null, null);
   setSession(null);
 }

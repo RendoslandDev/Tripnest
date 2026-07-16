@@ -3,6 +3,7 @@ import {
   MenuIcon, BellIcon, MailIcon,
 } from './icons';
 import { useSession } from '../../store/authStore';
+import { messagesPathForRole, profilePathForRole } from '../../lib/roleHome';
 import Avatar from '../ui/Avatar';
 
 interface TopBarProps {
@@ -67,10 +68,10 @@ export default function TopBar({ onMenu }: TopBarProps) {
         {session ? (
           <>
             <IconButton label="Notifications" onClick={() => navigate('/notifications')}><BellIcon size={18} /></IconButton>
-            <IconButton label="Messages" onClick={() => navigate(session.role === 'landlord' ? '/landlord/messages' : '/messages')}><MailIcon size={18} />
+            <IconButton label="Messages" onClick={() => navigate(messagesPathForRole(session.role))}><MailIcon size={18} />
             </IconButton>
            <button
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate(profilePathForRole(session.role))}
             aria-label="Account"
             className="
                 overflow-hidden rounded-full
