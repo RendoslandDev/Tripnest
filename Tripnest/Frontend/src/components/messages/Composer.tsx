@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { aiErrorMessage } from '../../api/assistant';
 import { ArrowUpIcon, MicIcon, PaperclipIcon, SparkleIcon, TrashIcon } from '../tenant/icons';
-import { clock } from './VoicePlayer';
+import { clock } from './time';
 
 interface ComposerProps {
   /** Caller owns the optimistic append + API call; resolve false to restore the draft for retry. */

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ESCROW_STATUS,
@@ -23,7 +23,8 @@ type Phase = 'checking' | 'paid' | 'processing' | 'missing';
  */
 export default function PaymentCallbackPage() {
   const navigate = useNavigate();
-  const pending = useRef(readPendingCheckout()).current;
+  // Read once, lazily — the pending checkout doesn't change while mounted.
+  const [pending] = useState(readPendingCheckout);
   const [phase, setPhase] = useState<Phase>(pending ? 'checking' : 'missing');
   const [amount, setAmount] = useState<number | null>(null);
 

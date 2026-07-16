@@ -1,11 +1,6 @@
 import { useRef, useState } from 'react';
 import { PlayIcon, PauseIcon } from '../tenant/icons';
-
-/** Format a number of seconds as m:ss. */
-export function clock(seconds: number): string {
-  const s = Math.max(0, Math.round(seconds));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-}
+import { clock } from './time';
 
 /** Inline player for a sent voice message — play/pause + progress + duration. */
 export default function VoicePlayer({ url, duration, mine }: { url: string; duration: number; mine: boolean }) {

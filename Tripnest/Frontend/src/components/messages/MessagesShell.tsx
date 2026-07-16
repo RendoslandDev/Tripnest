@@ -40,8 +40,12 @@ export default function MessagesShell({ conversations, basePath }: MessagesShell
   };
 
   // Deep links (e.g. from a provider page) should also clear unread state.
+  // Deferred a tick so the effect doesn't set state synchronously mid-render.
   useEffect(() => {
-    if (selected) clearUnread(String(selected.id));
+    if (!selected) return;
+    const id = String(selected.id);
+    const t = setTimeout(() => clearUnread(id), 0);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 

@@ -8,11 +8,11 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
-import Toggle from '../../components/ui/Toggle';
+import SafetyCard from '../../components/tenant/SafetyCard';
 import { formatCedi } from '../../lib/format';
 import { useSession } from '../../store/authStore';
 import {
-  CalendarIcon, CardIcon, HeartIcon, ToolIcon, SearchIcon, PlusIcon, MessageIcon, BellIcon,
+  CalendarIcon, CardIcon, HeartIcon, ToolIcon, SearchIcon, PlusIcon, MessageIcon,
   MapPinIcon,
 } from '../../components/tenant/icons';
 
@@ -39,7 +39,6 @@ function Stat({ label, value, icon }: { label: string; value: string; icon: Reac
 function Dashboard({ data }: { data: TenantDashboard }) {
   const session = useSession();
   const firstName = (session?.name ?? 'there').split(' ')[0];
-  const [smsOn, setSmsOn] = useState(true);
   const [invited, setInvited] = useState(false);
 
   const invite = () => {
@@ -163,19 +162,7 @@ function Dashboard({ data }: { data: TenantDashboard }) {
             </div>
           </Card>
 
-          <Card className="p-6">
-            <h2 className="text-lg font-bold text-ink">Safety First</h2>
-            <div className="mt-3 flex items-center justify-between">
-              <span className="flex items-center gap-2 text-sm text-ink">
-                <BellIcon size={16} className="text-brand" /> SMS Safety Alert
-              </span>
-              <Toggle on={smsOn} onChange={setSmsOn} />
-            </div>
-            <div className="mt-3 border-t border-gray-100 pt-3">
-              <p className="text-xs text-muted">Emergency Contact</p>
-              <p className="text-sm font-semibold text-ink">{data.emergencyContact}</p>
-            </div>
-          </Card>
+          <SafetyCard bookingId={data.upcoming.bookingId} />
 
           <Card className="bg-brand p-6 text-white">
             <h2 className="text-lg font-bold">Invite &amp; Earn</h2>

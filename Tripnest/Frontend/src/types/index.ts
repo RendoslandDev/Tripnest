@@ -117,6 +117,8 @@ export interface TenantDashboard {
   };
   upcoming: {
     title: string;
+    /** Empty when there is no upcoming stay; powers safety check-ins. */
+    bookingId: string;
     propertyId: string;
     location: string;
     dates: string;
@@ -131,7 +133,6 @@ export interface TenantDashboard {
     latest: { title: string; reportedOn: string; status: string };
   };
   messages: { id: number; name: string; role: string; preview: string; time: string }[];
-  emergencyContact: string;
 }
 
 export interface Conversation {

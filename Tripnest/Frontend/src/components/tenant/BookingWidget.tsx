@@ -36,7 +36,11 @@ export default function BookingWidget({ property }: { property: Property }) {
   // Availability of the selected span, from the live calendar (confirmed
   // bookings + landlord blocks). 'unknown' (offline/mock) doesn't block —
   // the server re-checks on booking anyway.
-  const [availability, setAvailability] = useState<'checking' | 'open' | 'taken' | 'unknown'>('unknown');
+  // Result is keyed by the span it answered for; a span with no answer yet
+  // reads as 'checking' (avoids a synchronous reset inside the effect).
+  const [availabilityResult, setAvailabilityResult] = useState<{
+    key: string; value: 'open' | 'taken' | 'unknown';
+  }>({ key: '', value: 'unknown' });
 
   const quote = useMemo(
     () => quotePrice(property, checkInISO, checkOutISO),
@@ -46,17 +50,22 @@ export default function BookingWidget({ property }: { property: Property }) {
   const valid = quote.nights > 0;
   const minCheckOut = addDaysISO(checkInISO, 1);
 
+  const spanKey = `${property.id}|${checkInISO}|${checkOutISO}`;
+
   useEffect(() => {
     if (quote.nights <= 0) return;
     let cancelled = false;
-    setAvailability('checking');
     isSpanAvailable(property.id, checkInISO, checkOutISO)
-      .then((open) => !cancelled && setAvailability(open ? 'open' : 'taken'))
-      .catch(() => !cancelled && setAvailability('unknown'));
+      .then((open) => !cancelled && setAvailabilityResult({ key: spanKey, value: open ? 'open' : 'taken' }))
+      .catch(() => !cancelled && setAvailabilityResult({ key: spanKey, value: 'unknown' }));
     return () => {
       cancelled = true;
     };
-  }, [property.id, checkInISO, checkOutISO, quote.nights]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spanKey, quote.nights]);
+
+  const availability: 'checking' | 'open' | 'taken' | 'unknown' =
+    quote.nights > 0 && availabilityResult.key !== spanKey ? 'checking' : availabilityResult.value;
 
   const reserve = () => {
     if (!valid || availability === 'taken') return;

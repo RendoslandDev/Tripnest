@@ -5,24 +5,17 @@ import { getMaintenanceTickets } from './maintenance';
 import { getConversations } from './messages';
 import { getPropertyById } from './properties';
 
-interface SafetyContactDto {
-  name?: string | null;
-  phone?: string | null;
-  email?: string | null;
-}
-
 /**
  * The tenant dashboard page spans several backend surfaces; compose
- * /api/personaldashboard/tenant with wishlist, maintenance, chat and the
- * trusted safety contact.
+ * /api/personaldashboard/tenant with wishlist, maintenance and chat.
+ * (The safety card manages its own trusted-contact state via api/safety.)
  */
 export async function getTenantDashboard(): Promise<TenantDashboard> {
-  const [dash, wishlist, tickets, conversations, contact] = await Promise.all([
+  const [dash, wishlist, tickets, conversations] = await Promise.all([
     apiGet<TenantDashboardDto>('/api/personaldashboard/tenant'),
     apiGet<WishlistItemDto[]>('/api/wishlist/mine').catch(() => []),
     getMaintenanceTickets().catch(() => []),
     getConversations().catch(() => []),
-    apiGet<SafetyContactDto>('/api/safety/contact').catch(() => null),
   ]);
 
   const next = dash.recentBookings.find((b) => mapBookingStatus(b.status, b.checkInDate) === 'upcoming');
@@ -38,6 +31,7 @@ export async function getTenantDashboard(): Promise<TenantDashboard> {
     },
     upcoming: {
       title: nextProperty?.title ?? (next ? 'Upcoming stay' : 'No upcoming stay'),
+      bookingId: next?.bookingId ?? '',
       propertyId: next?.propertyId ?? '',
       location: nextProperty?.location ?? '',
       dates: next ? `${formatIsoDate(next.checkInDate)} – ${formatIsoDate(next.checkOutDate)}` : '—',
@@ -60,6 +54,5 @@ export async function getTenantDashboard(): Promise<TenantDashboard> {
       preview: c.lastMessage || 'Open conversation',
       time: c.time,
     })),
-    emergencyContact: contact?.phone ?? '',
   };
 }
