@@ -5,6 +5,7 @@ import { useAsync } from '../../hooks/useAsync';
 import AddListingModal from '../../components/landlord/AddListingModal';
 import EditListingModal from '../../components/landlord/EditListingModal';
 import WalkthroughManagerModal from '../../components/landlord/WalkthroughManagerModal';
+import TourEditorModal from '../../components/landlord/TourEditorModal';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -25,6 +26,7 @@ function ListingCard({ listing, onUpdated }: {
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [managerOpen, setManagerOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
 
   return (
     <Card className="overflow-hidden">
@@ -50,6 +52,7 @@ function ListingCard({ listing, onUpdated }: {
         <div className="mt-3 flex gap-2">
           <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>Edit</Button>
           <Button variant="ghost" size="sm" onClick={() => setManagerOpen(true)}>Videos</Button>
+          <Button variant="ghost" size="sm" onClick={() => setTourOpen(true)}>Tour</Button>
         </div>
         {listing.status !== 'published' && (
           <p className="mt-2 text-xs text-muted">
@@ -69,6 +72,13 @@ function ListingCard({ listing, onUpdated }: {
           listingId={listing.id}
           listingTitle={listing.title}
           onClose={() => setManagerOpen(false)}
+        />
+      )}
+      {tourOpen && (
+        <TourEditorModal
+          listingId={listing.id}
+          listingTitle={listing.title}
+          onClose={() => setTourOpen(false)}
         />
       )}
     </Card>

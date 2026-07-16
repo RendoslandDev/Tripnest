@@ -7,6 +7,7 @@ import type {
   Conversation,
   ExchangePost,
   ExchangeReply,
+  HostTask,
   Inquiry,
   LandlordBooking,
   LandlordBookingStatus,
@@ -22,12 +23,24 @@ import type {
   Reservation,
   ReservationStatus,
   Resource,
+  Statement,
+  TeamUser,
   TenantStanding,
 } from '../types';
 import { assetUrl } from './client';
 import { getCachedListingPhotos } from '../lib/listingPhotos';
-import { exchangeCategoryFromInt, initialsOf, inquiryStatusFromInt, resourceCategoryFromInt } from '../lib/enums';
-import { formatDateFull } from '../lib/format';
+import {
+  exchangeCategoryFromInt,
+  initialsOf,
+  inquiryStatusFromInt,
+  resourceCategoryFromInt,
+  statementStatusFromInt,
+  taskPriorityFromInt,
+  taskStatusFromInt,
+  taskTypeFromInt,
+  teamRoleFromInt,
+  teamStatusFromInt,
+} from '../lib/enums';
 
 // ---------------------------------------------------------------------------
 // Wire types for TripNest.Core responses (camelCase JSON; enums arrive as
@@ -310,6 +323,96 @@ export interface InquiryResponseDto {
   createdAt: string;
 }
 
+export interface PricingSettingsResponseDto {
+  propertyId: string;
+  baseRate: number;
+  weekendRate: number;
+  weeklyDiscountPercent: number;
+  monthlyDiscountPercent: number;
+  minNights: number;
+  cleaningFee: number;
+}
+
+export interface StatementResponseDto {
+  id: string;
+  month: string;
+  period: string;
+  grossRevenue: number;
+  managementFee: number;
+  netPayout: number;
+  status: number; // StatementStatus: 0 Pending, 1 Paid
+}
+
+export interface HostTaskResponseDto {
+  id: string;
+  title: string;
+  propertyId?: string | null;
+  type: number; // HostTaskType: 0 Cleaning, 1 Maintenance, 2 Inspection, 3 Restock
+  priority: number; // HostTaskPriority: 0 Low, 1 Medium, 2 High
+  status: number; // HostTaskStatus: 0 Todo, 1 InProgress, 2 Done
+  dueDate?: string | null;
+  assignee?: string | null;
+  createdAt: string;
+}
+
+export interface TeamMemberResponseDto {
+  id: string;
+  name: string;
+  email: string;
+  role: number; // TeamMemberRole: 0 Owner, 1 CoHost, 2 Cleaner, 3 Maintenance, 4 Agent
+  status: number; // TeamMemberStatus: 0 Active, 1 Invited, 2 Suspended
+  propertiesCount: number;
+  lastActiveAt?: string | null;
+  createdAt: string;
+}
+
+export interface TourHotspotDto {
+  id: string;
+  x: number;
+  y: number;
+  label: string;
+  category: string;
+  detail: string;
+}
+
+export interface TourRoomDto {
+  id: string;
+  name: string;
+  area: string; // Entrance | Indoor | Outdoor | Exterior
+  caption: string;
+  dimensions?: string | null;
+  media?: string | null;
+  hotspots: TourHotspotDto[];
+}
+
+export interface PropertyTourResponseDto {
+  propertyId: string;
+  title: string;
+  rooms: TourRoomDto[];
+}
+
+export interface PayoutResponseDto {
+  payoutId: string;
+  escrowId: string;
+  bookingId: string;
+  grossAmount: number;
+  feeAmount: number;
+  amount: number;
+  status: number; // PayoutStatus: 0 Pending, 1 Processing, 2 Paid, 3 Failed
+  failureReason?: string | null;
+  createdAt: string;
+  paidAt?: string | null;
+}
+
+export interface PayoutAccountResponseDto {
+  channel: string;
+  providerCode: string;
+  accountNumber: string; // masked
+  accountName: string;
+  providerRegistered: boolean;
+  updatedAt: string;
+}
+
 export interface PaymentMethodResponseDto {
   id: string;
   provider: string;
@@ -346,6 +449,14 @@ const dateShort = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'sho
 export function formatIsoDate(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? iso : dateShort.format(d);
+}
+
+const dateFull = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+
+/** Like formatIsoDate but with the weekday — safe on full ISO datetimes. */
+export function formatIsoDateFull(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : dateFull.format(d);
 }
 
 /** "5m ago" style relative timestamp for feeds. */
@@ -586,8 +697,8 @@ export function mapReservationRow(dto: LandlordBookingResponseDto): Reservation 
     status: RESERVATION_STAGE[dto.stage] ?? 'upcoming',
     checkIn: formatIsoDate(dto.checkIn),
     checkOut: formatIsoDate(dto.checkOut),
-    checkInFull: formatDateFull(dto.checkIn),
-    checkOutFull: formatDateFull(dto.checkOut),
+    checkInFull: formatIsoDateFull(dto.checkIn),
+    checkOutFull: formatIsoDateFull(dto.checkOut),
     nights: dto.nights,
     guests: dto.guests,
     nightlyRate: dto.nights > 0 ? Math.round(dto.amount / dto.nights) : dto.amount,
@@ -606,8 +717,8 @@ export function mapReservationDetails(dto: ReservationDetailsResponseDto): Reser
     status: RESERVATION_STAGE[dto.stage] ?? 'upcoming',
     checkIn: formatIsoDate(dto.checkIn),
     checkOut: formatIsoDate(dto.checkOut),
-    checkInFull: formatDateFull(dto.checkIn),
-    checkOutFull: formatDateFull(dto.checkOut),
+    checkInFull: formatIsoDateFull(dto.checkIn),
+    checkOutFull: formatIsoDateFull(dto.checkOut),
     nights: dto.nights,
     guests: dto.guests,
     nightlyRate: dto.nightlyRate,
@@ -634,6 +745,44 @@ export function mapLandlordTenant(dto: LandlordTenantResponseDto): LandlordTenan
     leaseEnd: formatIsoDate(dto.leaseEnd),
     monthlyRent: dto.monthlyRent,
     standing: (dto.standing as TenantStanding) || 'current',
+  };
+}
+
+export function mapStatement(dto: StatementResponseDto): Statement {
+  return {
+    id: dto.id,
+    month: dto.month,
+    period: dto.period,
+    grossRevenue: dto.grossRevenue,
+    managementFee: dto.managementFee,
+    netPayout: dto.netPayout,
+    status: statementStatusFromInt(dto.status),
+  };
+}
+
+export function mapHostTask(dto: HostTaskResponseDto, propertyTitle?: string): HostTask {
+  return {
+    id: dto.id,
+    title: dto.title,
+    property: propertyTitle ?? (dto.propertyId ? `Property ${dto.propertyId.slice(0, 8)}` : 'All properties'),
+    type: taskTypeFromInt(dto.type),
+    priority: taskPriorityFromInt(dto.priority),
+    status: taskStatusFromInt(dto.status),
+    dueDate: dto.dueDate ? formatIsoDate(dto.dueDate) : 'No due date',
+    assignee: dto.assignee ?? 'Unassigned',
+  };
+}
+
+export function mapTeamMember(dto: TeamMemberResponseDto): TeamUser {
+  return {
+    id: dto.id,
+    name: dto.name,
+    email: dto.email,
+    role: teamRoleFromInt(dto.role),
+    status: teamStatusFromInt(dto.status),
+    initials: initialsOf(dto.name),
+    lastActive: dto.lastActiveAt ? timeAgo(dto.lastActiveAt) : 'Never',
+    properties: dto.propertiesCount,
   };
 }
 

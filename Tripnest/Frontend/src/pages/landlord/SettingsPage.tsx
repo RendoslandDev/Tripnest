@@ -3,13 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import {
   getVerificationStatus, startVerification, type VerificationStatus,
 } from '../../api/verification';
-import { ApiError } from '../../api/client';
+import { getMyProfile, updateMyProfile, uploadProfilePhoto } from '../../api/profile';
+import { cacheProfilePhoto, getCachedProfilePhoto } from '../../lib/profilePhoto';
+import { changePassword, deleteAccount } from '../../api/settings';
+import { ApiError, assetUrl } from '../../api/client';
 import { formatIsoDate } from '../../api/backend';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
-import { LogOutIcon, MailIcon, PlusIcon, ShieldIcon, TrashIcon } from '../../components/tenant/icons';
+import ContactVerification from '../../components/ContactVerification';
+import { LogOutIcon, MailIcon, ShieldIcon, TrashIcon } from '../../components/tenant/icons';
 import { useAsync } from '../../hooks/useAsync';
-import { refreshSessionFromServer, signOut, useSession } from '../../store/authStore';
+import { refreshSessionFromServer, signOut, updateSession, useSession } from '../../store/authStore';
 
 const INPUT =
   'w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand';
@@ -57,8 +61,9 @@ function SectionHeading({ title, desc }: { title: string; desc: string }) {
   );
 }
 
-function PasswordField({ label }: { label: string }) {
-  const [value, setValue] = useState('••••••••••');
+function PasswordField({
+  label, value, onChange,
+}: { label: string; value: string; onChange: (v: string) => void }) {
   const [show, setShow] = useState(false);
   return (
     <label className="block">
@@ -68,7 +73,7 @@ function PasswordField({ label }: { label: string }) {
         <input
           type={show ? 'text' : 'password'}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           className="w-full bg-transparent px-2.5 py-2.5 text-sm text-ink outline-none"
         />
         <button
@@ -81,6 +86,60 @@ function PasswordField({ label }: { label: string }) {
         </button>
       </div>
     </label>
+  );
+}
+
+/** Change-password form against PUT /api/settings/password. */
+function PasswordSection() {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (saving) return;
+    if (next !== confirm) {
+      setMessage({ ok: false, text: 'New passwords don’t match.' });
+      return;
+    }
+    setSaving(true);
+    setMessage(null);
+    try {
+      await changePassword({ currentPassword: current, newPassword: next, confirmNewPassword: confirm });
+      setCurrent(''); setNext(''); setConfirm('');
+      setMessage({ ok: true, text: 'Password updated.' });
+    } catch (err) {
+      setMessage({ ok: false, text: err instanceof ApiError ? err.message : 'Could not update your password.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="py-8">
+      <SectionHeading title="Password" desc="Modify your current password." />
+      <form onSubmit={submit} className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <PasswordField label="Current password" value={current} onChange={setCurrent} />
+          <PasswordField label="New password" value={next} onChange={setNext} />
+          <PasswordField label="Confirm new password" value={confirm} onChange={setConfirm} />
+        </div>
+        {message && (
+          <p className={`text-sm ${message.ok ? 'text-brand' : 'text-rose-600'}`} role={message.ok ? undefined : 'alert'}>
+            {message.text}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={saving || !current || !next || !confirm}
+          className="inline-flex items-center justify-center rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-40"
+        >
+          {saving ? 'Updating…' : 'Update password'}
+        </button>
+      </form>
+    </section>
   );
 }
 
@@ -292,11 +351,67 @@ function VerificationSection() {
 export default function LandlordSettingsPage() {
   const navigate = useNavigate();
   const session = useSession();
+  const profile = useAsync(getMyProfile, []);
 
   const [firstInitial = '', ...restName] = (session?.name ?? '').split(' ');
   const [firstName, setFirstName] = useState(firstInitial);
   const [lastName, setLastName] = useState(restName.join(' '));
-  const [email, setEmail] = useState(session?.email ?? '');
+
+  // Profile photo — uploaded through POST /api/profile/photo. The stored path
+  // is served via /uploads once Core exposes it; Avatar falls back to initials.
+  const [photoPath, setPhotoPath] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState('');
+  const photoRef = useRef<HTMLInputElement>(null);
+  const effectivePhoto = photoPath ?? profile.data?.profilePhotoPath ?? null;
+
+  const pickPhoto = async (file: File | undefined) => {
+    if (!file || photoBusy) return;
+    setPhotoBusy(true);
+    setPhotoError('');
+    try {
+      const path = await uploadProfilePhoto(file);
+      // Core doesn't serve /uploads yet — keep a local copy so the avatar shows it.
+      if (session) await cacheProfilePhoto(session.userId, file);
+      setPhotoPath(path);
+    } catch (err) {
+      setPhotoError(err instanceof ApiError ? err.message : 'Could not upload that picture.');
+    } finally {
+      setPhotoBusy(false);
+      if (photoRef.current) photoRef.current.value = '';
+    }
+  };
+
+  // Full name — saved through PUT /api/profile/me.
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameStatus, setNameStatus] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const saveName = async () => {
+    const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    if (!fullName || nameSaving) return;
+    setNameSaving(true);
+    setNameStatus(null);
+    try {
+      await updateMyProfile({ fullName });
+      updateSession({ name: fullName });
+      setNameStatus({ ok: true, text: 'Name updated.' });
+    } catch (err) {
+      setNameStatus({ ok: false, text: err instanceof ApiError ? err.message : 'Could not save your name.' });
+    } finally {
+      setNameSaving(false);
+    }
+  };
+
+  const removeAccount = async () => {
+    if (!window.confirm('Delete your TripNest account? This deactivates it permanently.')) return;
+    try {
+      await deleteAccount();
+      signOut();
+      navigate('/welcome');
+    } catch (err) {
+      window.alert(err instanceof ApiError ? err.message : 'Could not delete your account.');
+    }
+  };
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -310,14 +425,28 @@ export default function LandlordSettingsPage() {
       <div className="divide-y divide-gray-200">
         {/* Profile picture */}
         <section className="flex flex-wrap items-center gap-5 py-8">
-          <Avatar name={session?.name ?? 'TripNest Host'} size={88} />
+          <Avatar
+            name={session?.name ?? 'TripNest Host'}
+            src={getCachedProfilePhoto(session?.userId) ?? (effectivePhoto ? assetUrl(effectivePhoto) : null)}
+            size={88}
+          />
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-ink">Profile picture</p>
             <p className="text-sm text-muted">PNG, JPEG under 15MB</p>
+            {photoError && <p className="mt-1 text-sm text-rose-600" role="alert">{photoError}</p>}
+            {!photoError && photoPath && <p className="mt-1 text-sm text-brand">Picture uploaded.</p>}
           </div>
           <div className="flex shrink-0 gap-2">
-            <button type="button" className={BTN_OUTLINE}>Upload new picture</button>
-            <button type="button" className={BTN_OUTLINE}>Delete</button>
+            <input
+              ref={photoRef}
+              type="file"
+              accept="image/png,image/jpeg"
+              className="hidden"
+              onChange={(e) => void pickPhoto(e.target.files?.[0])}
+            />
+            <button type="button" className={BTN_OUTLINE} disabled={photoBusy} onClick={() => photoRef.current?.click()}>
+              {photoBusy ? 'Uploading…' : 'Upload new picture'}
+            </button>
           </div>
         </section>
 
@@ -334,38 +463,38 @@ export default function LandlordSettingsPage() {
               <input value={lastName} onChange={(e) => setLastName(e.target.value)} className={INPUT} />
             </label>
           </div>
+          <div className="mt-4 flex items-center gap-3">
+            <button type="button" className={BTN_OUTLINE} disabled={nameSaving} onClick={() => void saveName()}>
+              {nameSaving ? 'Saving…' : 'Save name'}
+            </button>
+            {nameStatus && (
+              <span className={`text-sm ${nameStatus.ok ? 'text-brand' : 'text-rose-600'}`}>{nameStatus.text}</span>
+            )}
+          </div>
         </section>
 
         {/* Contact email */}
         <section className="py-8">
-          <SectionHeading title="Contact email" desc="Manage your account's email address for the invoices." />
-          <div className="flex flex-wrap items-end justify-between gap-4">
+          <SectionHeading title="Contact email" desc="Your sign-in email — contact support to change it." />
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <label className="block w-full sm:max-w-sm">
               <span className="mb-1.5 block text-sm text-muted">Email</span>
-              <div className="flex items-center rounded-xl border border-gray-200 bg-white px-3.5 focus-within:border-brand">
+              <div className="flex items-center rounded-xl border border-gray-200 bg-gray-50 px-3.5">
                 <span className="text-muted"><MailIcon size={15} /></span>
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={session?.email ?? ''}
+                  readOnly
                   className="w-full bg-transparent px-2.5 py-2.5 text-sm text-ink outline-none"
                 />
               </div>
             </label>
-            <button type="button" className={BTN_OUTLINE}>
-              <PlusIcon size={15} /> Add another email
-            </button>
+            <ContactVerification kind="email" verified={session?.emailVerified ?? false} />
           </div>
         </section>
 
         {/* Password */}
-        <section className="py-8">
-          <SectionHeading title="Password" desc="Modify your current password." />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <PasswordField label="Current password" />
-            <PasswordField label="New password" />
-          </div>
-        </section>
+        <PasswordSection />
 
         {/* Identity verification */}
         <VerificationSection />
@@ -403,6 +532,7 @@ export default function LandlordSettingsPage() {
             </button>
             <button
               type="button"
+              onClick={() => void removeAccount()}
               className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50"
             >
               <TrashIcon size={15} /> Delete my account

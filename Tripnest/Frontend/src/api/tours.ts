@@ -1,8 +1,10 @@
-import type { PropertyTour, TourChapter, TourSegment } from '../types';
+import type { HotspotCategory, PropertyTour, TourChapter, TourRoom, TourSegment } from '../types';
 import { properties } from '../data/properties';
 import { buildTour } from '../data/tours';
 import { getPropertyById } from './properties';
 import { getClipsForProperty } from '../lib/clipStore';
+import { apiGet, apiPut } from './client';
+import type { PropertyTourResponseDto, TourRoomDto } from './backend';
 
 // Service layer for property virtual tours. The tour is derived from the
 // property (walkthrough video metadata, including generation status, rides
@@ -19,10 +21,70 @@ export function releaseTourMedia(propertyId: string): void {
   tourUrls.delete(propertyId);
 }
 
+// Gradient pairs for authored rooms (cycled), matching data/tours.ts's look.
+const AUTHORED_GRADIENTS: [string, string][] = [
+  ['#f5ecd9', '#d8c4a3'],
+  ['#e6f4ea', '#bcd9c4'],
+  ['#e9eef3', '#c3ced9'],
+  ['#e9e6f6', '#c3bce0'],
+  ['#e3f0fb', '#b8d8f0'],
+  ['#e8f3dd', '#bcd99a'],
+];
+
+const AREAS = new Set(['Entrance', 'Indoor', 'Outdoor', 'Exterior']);
+
+function mapAuthoredRoom(dto: TourRoomDto, index: number, photo?: string): TourRoom {
+  const [from, to] = AUTHORED_GRADIENTS[index % AUTHORED_GRADIENTS.length];
+  return {
+    id: dto.id,
+    name: dto.name,
+    area: (AREAS.has(dto.area) ? dto.area : 'Indoor') as TourRoom['area'],
+    caption: dto.caption,
+    dimensions: dto.dimensions ?? undefined,
+    from,
+    to,
+    image: photo,
+    hotspots: dto.hotspots.map((h) => ({
+      id: h.id,
+      x: h.x,
+      y: h.y,
+      label: h.label,
+      category: (h.category || 'amenity') as HotspotCategory,
+      detail: h.detail,
+    })),
+  };
+}
+
+/** Landlord-authored tour from the backend; null when none exists (404). */
+export async function getAuthoredTour(propertyId: string): Promise<PropertyTourResponseDto | null> {
+  try {
+    return await apiGet<PropertyTourResponseDto>(`/api/properties/${propertyId}/tour`);
+  } catch {
+    return null;
+  }
+}
+
+/** Create or replace the landlord-authored tour (rooms + hotspots). */
+export function saveAuthoredTour(
+  propertyId: string,
+  tour: { title: string; rooms: TourRoomDto[] },
+): Promise<PropertyTourResponseDto> {
+  return apiPut<PropertyTourResponseDto>(`/api/properties/${propertyId}/tour`, tour);
+}
+
 export async function getPropertyTour(id: string): Promise<PropertyTour | undefined> {
   const property = (await getPropertyById(id)) ?? properties.find((p) => p.id === id);
   if (!property) return undefined;
   const tour = buildTour(property);
+
+  // A tour authored through the backend wins over the synthesized rooms;
+  // property photos still supply the room stills (dto.media is a dead path
+  // until Core serves /uploads).
+  const authored = await getAuthoredTour(property.id);
+  if (authored && authored.rooms.length > 0) {
+    tour.title = authored.title || tour.title;
+    tour.rooms = authored.rooms.map((room, i) => mapAuthoredRoom(room, i, property.photos?.[i]));
+  }
 
   // Overlay locally generated walkthrough clips (photo index i → room i,
   // matching buildTour's photo assignment). Authored ready clips win.

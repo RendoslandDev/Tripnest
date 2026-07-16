@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { HostTask, TaskPriority, TaskStatus } from '../types';
-import { getHostTasks } from '../api/hostTasks';
+import { getHostTasks, setHostTaskStatus } from '../api/hostTasks';
 import { useAsync } from '../hooks/useAsync';
 import AsyncBoundary from '../components/AsyncBoundary';
 import Card from '../components/ui/Card';
@@ -53,10 +53,6 @@ function TaskRow({
 export default function TasksPage() {
   const state = useAsync(getHostTasks, []);
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
-  const [overrides, setOverrides] = useState<Record<number, boolean>>({});
-
-  const toggle = (id: number, current: boolean) =>
-    setOverrides((o) => ({ ...o, [id]: !current }));
 
   return (
     <div>
@@ -85,31 +81,28 @@ export default function TasksPage() {
         emptyMessage="No tasks yet."
         isEmpty={(rows) => rows.length === 0}
       >
-        {(rows) => <TaskList rows={rows} filter={filter} overrides={overrides} onToggle={toggle} />}
+        {(rows) => <TaskList initial={rows} filter={filter} />}
       </AsyncBoundary>
     </div>
   );
 }
 
-function TaskList({
-  rows,
-  filter,
-  overrides,
-  onToggle,
-}: {
-  rows: HostTask[];
-  filter: TaskStatus | 'all';
-  overrides: Record<number, boolean>;
-  onToggle: (id: number, current: boolean) => void;
-}) {
-  const isDone = (t: HostTask) => overrides[t.id] ?? t.status === 'done';
+function TaskList({ initial, filter }: { initial: HostTask[]; filter: TaskStatus | 'all' }) {
+  const [rows, setRows] = useState(initial);
 
-  const visible = useMemo(() => {
-    if (filter === 'all') return rows;
-    if (filter === 'done') return rows.filter(isDone);
-    return rows.filter((t) => !isDone(t) && t.status === filter);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, filter, overrides]);
+  // Optimistic toggle persisted through PATCH /api/tasks/{id}.
+  const toggle = (task: HostTask) => {
+    const next: TaskStatus = task.status === 'done' ? 'todo' : 'done';
+    setRows((rs) => rs.map((t) => (t.id === task.id ? { ...t, status: next } : t)));
+    setHostTaskStatus(task.id, next).catch(() =>
+      setRows((rs) => rs.map((t) => (t.id === task.id ? { ...t, status: task.status } : t))),
+    );
+  };
+
+  const visible = useMemo(
+    () => (filter === 'all' ? rows : rows.filter((t) => t.status === filter)),
+    [rows, filter],
+  );
 
   if (visible.length === 0) return <p className="text-muted">Nothing here.</p>;
 
@@ -117,7 +110,7 @@ function TaskList({
     <Card>
       <ul className="divide-y divide-gray-100">
         {visible.map((t) => (
-          <TaskRow key={t.id} task={t} done={isDone(t)} onToggle={() => onToggle(t.id, isDone(t))} />
+          <TaskRow key={t.id} task={t} done={t.status === 'done'} onToggle={() => toggle(t)} />
         ))}
       </ul>
     </Card>

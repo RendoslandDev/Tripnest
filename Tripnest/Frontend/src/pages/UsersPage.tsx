@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { TeamRole, TeamUser, TeamUserStatus } from '../types';
-import { getTeamUsers } from '../api/teamUsers';
+import { getTeamUsers, inviteTeamUser, removeTeamUser, setTeamUserStatus } from '../api/teamUsers';
 import { useAsync } from '../hooks/useAsync';
 import AsyncBoundary from '../components/AsyncBoundary';
 import Card from '../components/ui/Card';
@@ -24,24 +24,26 @@ const ROLE_LABEL: Record<TeamRole, string> = {
 
 const ROLES: TeamRole[] = ['co-host', 'cleaner', 'maintenance', 'agent'];
 
-function initials(name: string): string {
-  return name.split(' ').map((p) => p[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
-}
-
-function InviteForm({ onInvite }: { onInvite: (name: string, email: string, role: TeamRole) => void }) {
+function InviteForm({ onInvite }: { onInvite: (name: string, email: string, role: TeamRole) => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<TeamRole>('co-host');
+  const [sending, setSending] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) return;
-    onInvite(name.trim(), email.trim(), role);
-    setName('');
-    setEmail('');
-    setRole('co-host');
-    setOpen(false);
+    if (!name.trim() || !email.trim() || sending) return;
+    setSending(true);
+    try {
+      await onInvite(name.trim(), email.trim(), role);
+      setName('');
+      setEmail('');
+      setRole('co-host');
+      setOpen(false);
+    } finally {
+      setSending(false);
+    }
   };
 
   if (!open) return <Button onClick={() => setOpen(true)}>Invite user</Button>;
@@ -56,7 +58,7 @@ function InviteForm({ onInvite }: { onInvite: (name: string, email: string, role
         className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand">
         {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
       </select>
-      <Button type="submit" size="sm">Send invite</Button>
+      <Button type="submit" size="sm" disabled={sending}>{sending ? 'Sending…' : 'Send invite'}</Button>
       <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
     </form>
   );
@@ -64,22 +66,33 @@ function InviteForm({ onInvite }: { onInvite: (name: string, email: string, role
 
 function UsersView({ initial }: { initial: TeamUser[] }) {
   const [users, setUsers] = useState(initial);
+  const [error, setError] = useState('');
 
-  const invite = (name: string, email: string, role: TeamRole) =>
-    setUsers((us) => [
-      { id: `u-${Date.now()}`, name, email, role, status: 'invited', initials: initials(name), lastActive: 'Just now', properties: 0 },
-      ...us,
-    ]);
+  const invite = async (name: string, email: string, role: TeamRole) => {
+    setError('');
+    try {
+      const member = await inviteTeamUser(name, email, role);
+      setUsers((us) => [member, ...us]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not send that invite.');
+    }
+  };
 
   // Owners can't be suspended; everyone else toggles active <-> suspended.
   const toggleManage = (id: string) =>
     setUsers((us) =>
-      us.map((u) =>
-        u.id === id && u.role !== 'owner'
-          ? { ...u, status: u.status === 'suspended' ? 'active' : 'suspended' }
-          : u,
-      ),
+      us.map((u) => {
+        if (u.id !== id || u.role === 'owner') return u;
+        const status: TeamUserStatus = u.status === 'suspended' ? 'active' : 'suspended';
+        setTeamUserStatus(id, status).catch(() => {});
+        return { ...u, status };
+      }),
     );
+
+  const remove = (id: string) => {
+    setUsers((us) => us.filter((u) => u.id !== id));
+    removeTeamUser(id).catch(() => {});
+  };
 
   return (
     <>
@@ -87,7 +100,15 @@ function UsersView({ initial }: { initial: TeamUser[] }) {
         <h1 className="text-4xl font-bold text-ink">Users</h1>
         <InviteForm onInvite={invite} />
       </div>
+      {error && (
+        <p className="mb-4 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600" role="alert">
+          {error}
+        </p>
+      )}
 
+      {users.length === 0 ? (
+        <p className="text-muted">No team members yet — send your first invite above.</p>
+      ) : (
       <Card className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left">
           <thead>
@@ -119,20 +140,33 @@ function UsersView({ initial }: { initial: TeamUser[] }) {
                 <td className="px-6 py-4 text-ink">{u.properties}</td>
                 <td className="px-6 py-4 text-muted">{u.lastActive}</td>
                 <td className="px-6 py-4 text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleManage(u.id)}
-                    disabled={u.role === 'owner'}
-                  >
-                    {u.status === 'suspended' ? 'Reactivate' : 'Suspend'}
-                  </Button>
+                  <div className="flex justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleManage(u.id)}
+                      disabled={u.role === 'owner'}
+                    >
+                      {u.status === 'suspended' ? 'Reactivate' : 'Suspend'}
+                    </Button>
+                    {u.role !== 'owner' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-rose-600 hover:bg-rose-50"
+                        onClick={() => remove(u.id)}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
+      )}
     </>
   );
 }
@@ -145,8 +179,6 @@ export default function UsersPage() {
       state={state}
       loadingMessage="Loading users…"
       errorMessage="Failed to load users."
-      emptyMessage="No users yet."
-      isEmpty={(rows) => rows.length === 0}
     >
       {(rows) => <UsersView initial={rows} />}
     </AsyncBoundary>

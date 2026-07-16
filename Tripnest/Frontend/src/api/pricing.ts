@@ -1,13 +1,28 @@
 import type { PricingSettings } from '../types';
-import { pricingSettings } from '../data/pricing';
-import { mockResponse } from './client';
+import { apiGet, apiPut } from './client';
+import type { PricingSettingsResponseDto } from './backend';
 
-export function getPricingSettings(): Promise<PricingSettings> {
-  // return apiGet<PricingSettings>('/pricing');
-  return mockResponse(pricingSettings);
+// Per-listing pricing, backed by TripNest.Core's /api/pricing/{propertyId}
+// (defaults are derived from the listing when nothing has been saved yet).
+
+function toSettings(dto: PricingSettingsResponseDto): PricingSettings {
+  return {
+    baseRate: dto.baseRate,
+    weekendRate: dto.weekendRate,
+    weeklyDiscountPercent: dto.weeklyDiscountPercent,
+    monthlyDiscountPercent: dto.monthlyDiscountPercent,
+    minNights: dto.minNights,
+    cleaningFee: dto.cleaningFee,
+  };
 }
 
-export function savePricingSettings(settings: PricingSettings): Promise<PricingSettings> {
-  // return apiPut<PricingSettings>('/pricing', settings);
-  return mockResponse(settings);
+export async function getPricingSettings(propertyId: string): Promise<PricingSettings> {
+  return toSettings(await apiGet<PricingSettingsResponseDto>(`/api/pricing/${propertyId}`));
+}
+
+export async function savePricingSettings(
+  propertyId: string,
+  settings: PricingSettings,
+): Promise<PricingSettings> {
+  return toSettings(await apiPut<PricingSettingsResponseDto>(`/api/pricing/${propertyId}`, settings));
 }

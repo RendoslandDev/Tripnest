@@ -263,7 +263,7 @@ export interface Transaction {
 //  Landlord earnings & payouts (settlement of successful transactions).
 
 
-export type EarningStatus = 'settled' | 'pending';
+export type EarningStatus = 'settled' | 'pending' | 'processing' | 'failed';
 
 export interface EarningTxn {
   id: string;
@@ -284,6 +284,15 @@ export interface EarningsSummary {
   lifetime: number;
   nextPayoutDate: string;
   transactions: EarningTxn[];
+}
+
+/** Where the host's payouts are sent (account number arrives masked). */
+export interface PayoutAccount {
+  channel: 'mobile_money' | 'ghipss';
+  providerCode: string;
+  accountNumber: string;
+  accountName: string;
+  providerRegistered: boolean;
 }
 
 //  Landlord workspace: inquiries, bookings, tenants, reviews.
@@ -341,7 +350,7 @@ export interface LandlordReview {
 export type StatementStatus = 'paid' | 'pending';
 
 export interface Statement {
-  id: number;
+  id: string;
   month: string;
   period: string;
   grossRevenue: number;
@@ -378,7 +387,7 @@ export type TaskPriority = 'low' | 'medium' | 'high';
 export type TaskStatus = 'todo' | 'in-progress' | 'done';
 
 export interface HostTask {
-  id: number;
+  id: string;
   title: string;
   property: string;
   type: TaskType;

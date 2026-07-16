@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import type { PricingSettings } from '../types';
+import type { Listing, PricingSettings } from '../types';
 import { getPricingSettings, savePricingSettings } from '../api/pricing';
+import { getListings } from '../api/listings';
 import { useAsync } from '../hooks/useAsync';
 import AsyncBoundary from '../components/AsyncBoundary';
 import Card from '../components/ui/Card';
@@ -131,14 +132,18 @@ function weekPreview(form: PricingSettings) {
   };
 }
 
-function PricingForm({ initial }: { initial: PricingSettings }) {
+function PricingForm({ initial, propertyId }: { initial: PricingSettings; propertyId: string }) {
   const [form, setForm] = useState(initial);
+  // Compare against the last persisted values, not the first fetch, so the
+  // "Saved" state actually appears after a successful PUT.
+  const [persisted, setPersisted] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
 
   const dirty = useMemo(
-    () => (Object.keys(form) as (keyof PricingSettings)[]).some((k) => form[k] !== initial[k]),
-    [form, initial],
+    () => (Object.keys(form) as (keyof PricingSettings)[]).some((k) => form[k] !== persisted[k]),
+    [form, persisted],
   );
   const weekendLift =
     form.baseRate > 0 ? Math.round(((form.weekendRate - form.baseRate) / form.baseRate) * 100) : 0;
@@ -151,9 +156,17 @@ function PricingForm({ initial }: { initial: PricingSettings }) {
 
   const onSave = async () => {
     setSaving(true);
-    await savePricingSettings(form);
-    setSaving(false);
-    setSaved(true);
+    setError('');
+    try {
+      const savedSettings = await savePricingSettings(propertyId, form);
+      setPersisted(savedSettings);
+      setForm(savedSettings);
+      setSaved(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save pricing.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -236,6 +249,7 @@ function PricingForm({ initial }: { initial: PricingSettings }) {
               Unsaved changes
             </span>
           )}
+          {error && <span className="text-sm text-rose-600" role="alert">{error}</span>}
         </div>
       </div>
 
@@ -289,17 +303,48 @@ function PricingForm({ initial }: { initial: PricingSettings }) {
   );
 }
 
+function ListingPricing({ listings }: { listings: Listing[] }) {
+  const [propertyId, setPropertyId] = useState(listings[0].id);
+  const state = useAsync(() => getPricingSettings(propertyId), [propertyId]);
+
+  return (
+    <>
+      <label className="mb-6 block w-full max-w-sm">
+        <span className="mb-1.5 block text-sm font-medium text-ink">Listing</span>
+        <select
+          value={propertyId}
+          onChange={(e) => setPropertyId(e.target.value)}
+          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-brand"
+        >
+          {listings.map((l) => (
+            <option key={l.id} value={l.id}>{l.title}</option>
+          ))}
+        </select>
+      </label>
+      <AsyncBoundary state={state} loadingMessage="Loading pricing…" errorMessage="Failed to load pricing.">
+        {(data) => <PricingForm key={propertyId} initial={data} propertyId={propertyId} />}
+      </AsyncBoundary>
+    </>
+  );
+}
+
 export default function PricingPage() {
-  const state = useAsync(getPricingSettings, []);
+  const listings = useAsync(getListings, []);
 
   return (
     <div>
       <h1 className="text-4xl font-bold text-ink">Pricing</h1>
       <p className="mb-8 mt-1 text-sm text-muted">
-        Set your rates and stay rules — the preview shows exactly what guests will pay.
+        Set your rates and stay rules per listing — the preview shows exactly what guests will pay.
       </p>
-      <AsyncBoundary state={state} loadingMessage="Loading pricing…" errorMessage="Failed to load pricing.">
-        {(data) => <PricingForm initial={data} />}
+      <AsyncBoundary
+        state={listings}
+        loadingMessage="Loading listings…"
+        errorMessage="Failed to load listings."
+        emptyMessage="Add a listing first — pricing is set per listing."
+        isEmpty={(rows) => rows.length === 0}
+      >
+        {(rows) => <ListingPricing listings={rows} />}
       </AsyncBoundary>
     </div>
   );

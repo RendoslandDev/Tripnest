@@ -3,7 +3,7 @@ import type { HostTask } from '../types';
 // Mock operational tasks across the host's properties. Swap for API data later.
 export const hostTasks: HostTask[] = [
   {
-    id: 1,
+    id: '1',
     title: 'Turnover clean after checkout',
     property: 'Sunlit Loft near Osu',
     type: 'cleaning',
@@ -13,7 +13,7 @@ export const hostTasks: HostTask[] = [
     assignee: 'Ama Mensah',
   },
   {
-    id: 2,
+    id: '2',
     title: 'Fix dripping kitchen tap',
     property: 'Garden Studio, East Legon',
     type: 'maintenance',
@@ -23,7 +23,7 @@ export const hostTasks: HostTask[] = [
     assignee: 'Kwesi Boateng',
   },
   {
-    id: 3,
+    id: '3',
     title: 'Quarterly safety inspection',
     property: 'Hillside Family House',
     type: 'inspection',
@@ -33,7 +33,7 @@ export const hostTasks: HostTask[] = [
     assignee: 'Unassigned',
   },
   {
-    id: 4,
+    id: '4',
     title: 'Restock toiletries & coffee',
     property: 'Beachfront Cabana',
     type: 'restock',
@@ -43,7 +43,7 @@ export const hostTasks: HostTask[] = [
     assignee: 'Ama Mensah',
   },
   {
-    id: 5,
+    id: '5',
     title: 'Replace broken AC remote',
     property: 'City View Penthouse',
     type: 'maintenance',
@@ -53,7 +53,7 @@ export const hostTasks: HostTask[] = [
     assignee: 'Kwesi Boateng',
   },
   {
-    id: 6,
+    id: '6',
     title: 'Deep clean before long stay',
     property: 'Sunlit Loft near Osu',
     type: 'cleaning',

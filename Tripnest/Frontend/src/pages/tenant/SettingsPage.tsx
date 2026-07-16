@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -11,6 +11,9 @@ import {
   ChevronRightIcon,
 } from '../../components/tenant/icons';
 import { signOut } from '../../store/authStore';
+import { changePassword, getNotificationPrefs, updateNotificationPrefs } from '../../api/settings';
+import { updateMyProfile } from '../../api/profile';
+import { ApiError } from '../../api/client';
 
 function SectionHeader({
   icon, title, desc,
@@ -45,18 +48,60 @@ function ToggleRow({
 const SELECT_CLASS =
   'w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink outline-none focus:border-brand';
 
+// Backend Language enum: 0 English, 1 Twi, 2 Ga, 3 French.
+const LANGUAGES = ['English', 'Twi', 'Ga', 'French'];
+
 export default function SettingsPage() {
   const navigate = useNavigate();
   const [prefs, setPrefs] = useState({ email: true, sms: true, push: false });
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordSaved, setPasswordSaved] = useState(false);
-  const set = (key: keyof typeof prefs) => (value: boolean) =>
-    setPrefs((p) => ({ ...p, [key]: value }));
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [language, setLanguage] = useState(0);
 
-  const savePassword = (e: React.FormEvent) => {
+  // Email/SMS mirror the server's communication preferences; push is local-only.
+  useEffect(() => {
+    getNotificationPrefs()
+      .then((p) => setPrefs((prev) => ({ ...prev, email: p.emailEnabled, sms: p.smsEnabled })))
+      .catch(() => {});
+  }, []);
+
+  const set = (key: keyof typeof prefs) => (value: boolean) => {
+    const next = { ...prefs, [key]: value };
+    setPrefs(next);
+    if (key !== 'push') {
+      updateNotificationPrefs({ smsEnabled: next.sms, emailEnabled: next.email }).catch(() => {});
+    }
+  };
+
+  const setLang = (idx: number) => {
+    setLanguage(idx);
+    updateMyProfile({ preferredLanguage: idx }).catch(() => {});
+  };
+
+  const savePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setChangingPassword(false);
-    setPasswordSaved(true);
+    if (passwordBusy) return;
+    setPasswordBusy(true);
+    setPasswordError('');
+    try {
+      await changePassword({
+        currentPassword,
+        newPassword,
+        confirmNewPassword: newPassword,
+      });
+      setCurrentPassword('');
+      setNewPassword('');
+      setChangingPassword(false);
+      setPasswordSaved(true);
+    } catch (err) {
+      setPasswordError(err instanceof ApiError ? err.message : 'Could not update your password.');
+    } finally {
+      setPasswordBusy(false);
+    }
   };
 
   return (
@@ -88,10 +133,14 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 gap-4 px-6 py-5 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium text-ink">Language</span>
-            <select className={SELECT_CLASS}>
-              <option>English</option>
-              <option>Twi</option>
-              <option>Ga</option>
+            <select
+              value={language}
+              onChange={(e) => setLang(Number(e.target.value))}
+              className={SELECT_CLASS}
+            >
+              {LANGUAGES.map((name, idx) => (
+                <option key={name} value={idx}>{name}</option>
+              ))}
             </select>
           </label>
           <label className="block">
@@ -116,17 +165,24 @@ export default function SettingsPage() {
               <input
                 type="password"
                 required
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="Current password"
                 className={SELECT_CLASS}
               />
               <input
                 type="password"
                 required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="New password"
                 className={SELECT_CLASS}
               />
+              {passwordError && <p className="text-sm text-rose-600" role="alert">{passwordError}</p>}
               <div className="flex gap-2">
-                <Button type="submit" size="sm">Update password</Button>
+                <Button type="submit" size="sm" disabled={passwordBusy}>
+                  {passwordBusy ? 'Updating…' : 'Update password'}
+                </Button>
                 <Button type="button" size="sm" variant="ghost" onClick={() => setChangingPassword(false)}>Cancel</Button>
               </div>
             </form>

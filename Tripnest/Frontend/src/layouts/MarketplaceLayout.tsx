@@ -4,6 +4,7 @@ import TenantSidebar from '../components/tenant/TenantSidebar';
 import TopBar from '../components/tenant/TopBar';
 import Footer from '../components/tenant/Footer';
 import ChatButton from '../components/tenant/ChatButton';
+import OnboardingTour from '../components/OnboardingTour';
 
 /** Shell for the tenant marketplace: sidebar + top bar + content + footer. */
 export default function MarketplaceLayout() {
@@ -31,6 +32,7 @@ export default function MarketplaceLayout() {
         <Footer />
       </div>
       <ChatButton />
+      <OnboardingTour role="tenant" />
     </div>
   );
 }

@@ -1,16 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { currentUser } from '../../data/user';
 import { useSession, updateSession } from '../../store/authStore';
+import { getMyProfile, updateMyProfile, uploadProfilePhoto } from '../../api/profile';
+import { cacheProfilePhoto, getCachedProfilePhoto } from '../../lib/profilePhoto';
+import { ApiError, assetUrl } from '../../api/client';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
+import ContactVerification from '../../components/ContactVerification';
 import {
   ShieldIcon, CheckIcon, StarIcon, MapPinIcon, MailIcon, PhoneIcon, BadgeIcon, ClockIcon,
 } from '../../components/tenant/icons';
 
-function Field({ label, value, onChange, type = 'text' }: {
-  label: string; value: string; onChange: (v: string) => void; type?: string;
+function Field({ label, value, onChange, type = 'text', disabled = false, hint }: {
+  label: string; value: string; onChange: (v: string) => void; type?: string; disabled?: boolean; hint?: string;
 }) {
   return (
     <label className="block">
@@ -18,9 +22,11 @@ function Field({ label, value, onChange, type = 'text' }: {
       <input
         type={type}
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink outline-none focus:border-brand"
+        className={`w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink outline-none focus:border-brand ${disabled ? 'bg-gray-50 text-muted' : ''}`}
       />
+      {hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}
     </label>
   );
 }
@@ -53,16 +59,37 @@ export default function ProfilePage() {
 
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [photoPath, setPhotoPath] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const photoRef = useRef<HTMLInputElement>(null);
   const baseName = session?.name ?? currentUser.name;
   const [form, setForm] = useState({
     name: baseName,
     email: session?.email ?? currentUser.email,
-    phone: currentUser.phone,
+    phone: '',
     location: currentUser.location,
     work: 'Student at UMaT',
     languages: 'English, Twi',
     bio: `Hi, I'm ${baseName.split(' ')[0]}!  |\n I'm on TripNest to find safe, verified homes and connect with trusted hosts across Ghana.`,
   });
+
+  // Seed the editable fields from the live profile (phone/bio live server-side).
+  useEffect(() => {
+    getMyProfile()
+      .then((me) => {
+        setPhotoPath(me.profilePhotoPath ?? null);
+        setForm((f) => ({
+          ...f,
+          name: me.fullName || f.name,
+          email: me.email || f.email,
+          phone: me.phone ?? '',
+          bio: me.bio || f.bio,
+        }));
+      })
+      .catch(() => {});
+  }, []);
 
   const set = (key: keyof typeof form) => (value: string) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -71,12 +98,42 @@ export default function ProfilePage() {
 
   const firstName = form.name.split(' ')[0];
 
-  const save = () => {
-    if (session) {
-      updateSession({ name: form.name.trim() || session.name, email: form.email.trim() || session.email });
+  const pickPhoto = async (file: File | undefined) => {
+    if (!file || photoBusy) return;
+    setPhotoBusy(true);
+    try {
+      const path = await uploadProfilePhoto(file);
+      // Core doesn't serve /uploads yet — keep a local copy so the avatar shows it.
+      if (session) await cacheProfilePhoto(session.userId, file);
+      setPhotoPath(path);
+    } catch (err) {
+      setSaveError(err instanceof ApiError ? err.message : 'Could not upload that photo.');
+    } finally {
+      setPhotoBusy(false);
+      if (photoRef.current) photoRef.current.value = '';
     }
-    setEditing(false);
-    setSaved(true);
+  };
+
+  // Location/work/languages are display-only flourishes with no backend home;
+  // name, phone and bio persist through PUT /api/profile/me.
+  const save = async () => {
+    if (saving) return;
+    setSaving(true);
+    setSaveError('');
+    try {
+      await updateMyProfile({
+        fullName: form.name.trim() || undefined,
+        phone: form.phone.trim() || undefined,
+        bio: form.bio.trim() || undefined,
+      });
+      if (session) updateSession({ name: form.name.trim() || session.name });
+      setEditing(false);
+      setSaved(true);
+    } catch (err) {
+      setSaveError(err instanceof ApiError ? err.message : 'Could not save your profile.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -91,7 +148,27 @@ export default function ProfilePage() {
 
         <div className="px-4 sm:px-8">
           <div className="relative -mt-14 w-fit">
-            <Avatar name={form.name} size={112} className="text-3xl ring-4 ring-white" />
+            <input
+              ref={photoRef}
+              type="file"
+              accept="image/png,image/jpeg"
+              className="hidden"
+              onChange={(e) => void pickPhoto(e.target.files?.[0])}
+            />
+            <button
+              type="button"
+              onClick={() => photoRef.current?.click()}
+              title="Change photo"
+              aria-label="Change profile photo"
+              className={`block rounded-full ${photoBusy ? 'opacity-60' : ''}`}
+            >
+              <Avatar
+                name={form.name}
+                src={getCachedProfilePhoto(session?.userId) ?? (photoPath ? assetUrl(photoPath) : null)}
+                size={112}
+                className="text-3xl ring-4 ring-white"
+              />
+            </button>
             <span className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-brand text-white">
               <ShieldIcon size={15} />
             </span>
@@ -130,7 +207,7 @@ export default function ProfilePage() {
             <h2 className="mb-4 text-xl font-bold text-ink">Edit your profile</h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Full name" value={form.name} onChange={set('name')} />
-              <Field label="Email" type="email" value={form.email} onChange={set('email')} />
+              <Field label="Email" type="email" value={form.email} onChange={set('email')} disabled hint="Your sign-in email can't be changed here." />
               <Field label="Phone" value={form.phone} onChange={set('phone')} />
               <Field label="Location" value={form.location} onChange={set('location')} />
               <Field label="Work" value={form.work} onChange={set('work')} />
@@ -145,8 +222,9 @@ export default function ProfilePage() {
                 className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink outline-none focus:border-brand"
               />
             </label>
+            {saveError && <p className="mt-3 text-sm text-rose-600" role="alert">{saveError}</p>}
             <div className="mt-5 flex gap-2">
-              <Button onClick={save}>Save changes</Button>
+              <Button onClick={() => void save()} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
               <Button variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
             </div>
           </Card>
@@ -168,10 +246,22 @@ export default function ProfilePage() {
               <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
                 <ShieldIcon size={18} className="text-brand" /> {firstName}'s confirmed information
               </h2>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <VerifiedChip label="Identity" />
-                <VerifiedChip label="Email address" />
-                <VerifiedChip label="Phone number" />
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {session?.verified ? (
+                  <VerifiedChip label="Identity" />
+                ) : (
+                  <Badge tone="gray">Identity not verified</Badge>
+                )}
+                {session?.emailVerified ? (
+                  <VerifiedChip label="Email address" />
+                ) : (
+                  <ContactVerification kind="email" verified={false} />
+                )}
+                {session?.phoneVerified ? (
+                  <VerifiedChip label="Phone number" />
+                ) : (
+                  <ContactVerification kind="phone" verified={false} />
+                )}
               </div>
             </Card>
 

@@ -1,8 +1,10 @@
 import type { Statement } from '../types';
-import { statements } from '../data/statements';
-import { mockResponse } from './client';
+import { apiGet } from './client';
+import { mapStatement, type StatementResponseDto } from './backend';
 
-export function getStatements(): Promise<Statement[]> {
-  // return apiGet<Statement[]>('/statements');
-  return mockResponse(statements);
+// Monthly payout statements, computed server-side from completed bookings.
+
+export async function getStatements(): Promise<Statement[]> {
+  const dtos = await apiGet<StatementResponseDto[]>('/api/statements');
+  return dtos.map(mapStatement);
 }
