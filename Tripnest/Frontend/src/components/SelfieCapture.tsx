@@ -48,7 +48,7 @@ export default function SelfieCapture({ onCapture }: {
     } catch {
       setPhase('error');
       setError(
-        navigator.mediaDevices?.getUserMedia
+        typeof navigator.mediaDevices?.getUserMedia === 'function'
           ? 'Camera access was blocked. Allow camera access in your browser and try again.'
           : 'This device has no camera available. Verification needs a live selfie.',
       );
