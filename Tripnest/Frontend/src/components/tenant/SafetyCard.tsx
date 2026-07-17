@@ -8,6 +8,7 @@ import { ApiError } from '../../api/client';
 import Card from '../ui/Card';
 import Toggle from '../ui/Toggle';
 import Button from '../ui/Button';
+import { useT } from '../../lib/i18n';
 import { BellIcon, ShieldIcon } from './icons';
 
 const INPUT =
@@ -23,6 +24,7 @@ export default function SafetyCard({ bookingId }: {
   /** Booking the check-in/alert is for; empty → actions explain they need a stay. */
   bookingId: string;
 }) {
+  const t = useT();
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
   const [contact, setContact] = useState<TrustedContact | null>(null);
   const [editing, setEditing] = useState(false);
@@ -137,25 +139,25 @@ export default function SafetyCard({ bookingId }: {
   return (
     <Card className="p-6">
       <h2 className="flex items-center gap-2 text-lg font-bold text-ink">
-        <ShieldIcon size={18} className="text-brand" /> Safety First
+        <ShieldIcon size={18} className="text-brand" /> {t('Safety First')}
       </h2>
 
       <div className="mt-3 flex items-center justify-between">
         <span className="flex items-center gap-2 text-sm text-ink">
-          <BellIcon size={16} className="text-brand" /> SMS notifications
+          <BellIcon size={16} className="text-brand" /> {t('SMS notifications')}
         </span>
         <Toggle on={prefs?.smsEnabled ?? false} onChange={toggleSms} />
       </div>
 
       <div className="mt-3 border-t border-gray-100 pt-3">
         <div className="flex items-center justify-between">
-          <p className="text-xs text-muted">Trusted contact</p>
+          <p className="text-xs text-muted">{t('Trusted contact')}</p>
           <button
             type="button"
             onClick={() => setEditing((v) => !v)}
             className="text-xs font-semibold text-brand"
           >
-            {editing ? 'Cancel' : hasContact ? 'Edit' : 'Add'}
+            {editing ? t('Cancel') : hasContact ? t('Edit') : t('Add')}
           </button>
         </div>
         {editing ? (
@@ -164,7 +166,7 @@ export default function SafetyCard({ bookingId }: {
             <input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="Phone (+233 …)" className={INPUT} />
             <input value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="Email (optional)" className={INPUT} />
             <Button size="sm" disabled={busy === 'save'} onClick={saveContact}>
-              {busy === 'save' ? 'Saving…' : 'Save contact'}
+              {busy === 'save' ? 'Saving…' : t('Save contact')}
             </Button>
           </div>
         ) : hasContact ? (
@@ -187,12 +189,12 @@ export default function SafetyCard({ bookingId }: {
             onChange={(e) => setShareLocation(e.target.checked)}
             className="accent-brand"
           />
-          Share my location with the check-in
+          {t('Share my location with the check-in')}
         </label>
         {bookingId ? (
           <div className="flex flex-wrap gap-2">
             <Button size="sm" disabled={busy !== null} onClick={checkIn}>
-              {busy === 'checkin' ? 'Checking in…' : "I've arrived safely"}
+              {busy === 'checkin' ? 'Checking in…' : t("I've arrived safely")}
             </Button>
             <Button
               size="sm"
@@ -201,7 +203,7 @@ export default function SafetyCard({ bookingId }: {
               disabled={busy !== null}
               onClick={emergency}
             >
-              {busy === 'alert' ? 'Sending…' : armed ? 'Tap again to confirm' : 'Emergency alert'}
+              {busy === 'alert' ? 'Sending…' : armed ? t('Tap again to confirm') : t('Emergency alert')}
             </Button>
           </div>
         ) : (

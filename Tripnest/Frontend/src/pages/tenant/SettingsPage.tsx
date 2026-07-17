@@ -45,11 +45,10 @@ function ToggleRow({
   );
 }
 
+import { LANGUAGES as APP_LANGUAGES, getLanguage, setLanguage as setAppLanguage, languageToBackend, useT } from '../../lib/i18n';
+
 const SELECT_CLASS =
   'w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink outline-none focus:border-brand';
-
-// Backend Language enum: 0 English, 1 Twi, 2 Ga, 3 French.
-const LANGUAGES = ['English', 'Twi', 'Ga', 'French'];
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -60,7 +59,8 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState('');
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [passwordError, setPasswordError] = useState('');
-  const [language, setLanguage] = useState(0);
+  const t = useT();
+  const [language, setLanguage] = useState(getLanguage());
 
   // Email/SMS mirror the server's communication preferences; push is local-only.
   useEffect(() => {
@@ -77,9 +77,10 @@ export default function SettingsPage() {
     }
   };
 
-  const setLang = (idx: number) => {
-    setLanguage(idx);
-    updateMyProfile({ preferredLanguage: idx }).catch(() => {});
+  const setLang = (code: typeof language) => {
+    setLanguage(code);
+    setAppLanguage(code); // re-renders every translated surface immediately
+    updateMyProfile({ preferredLanguage: languageToBackend(code) }).catch(() => {});
   };
 
   const savePassword = async (e: React.FormEvent) => {
@@ -107,44 +108,44 @@ export default function SettingsPage() {
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-ink">Settings</h1>
-        <p className="mt-1 text-muted">Manage your account and preferences</p>
+        <h1 className="text-3xl font-bold text-ink">{t('Settings')}</h1>
+        <p className="mt-1 text-muted">{t('Manage your account and preferences')}</p>
       </div>
 
       <Card className="overflow-hidden">
         <SectionHeader
           icon={<BellIcon size={20} />}
-          title="Notifications"
-          desc="Choose how TripNest keeps you in the loop"
+          title={t('Notifications')}
+          desc={t('Choose how TripNest keeps you in the loop')}
         />
         <div className="divide-y divide-gray-100 px-6 py-2">
-          <ToggleRow label="Email notifications" desc="Booking and payment updates by email" value={prefs.email} onChange={set('email')} />
-          <ToggleRow label="SMS safety alerts" desc="Instant safety alerts by SMS" value={prefs.sms} onChange={set('sms')} />
-          <ToggleRow label="Push notifications" desc="Alerts on your device" value={prefs.push} onChange={set('push')} />
+          <ToggleRow label={t('Email notifications')} desc={t('Booking and payment updates by email')} value={prefs.email} onChange={set('email')} />
+          <ToggleRow label={t('SMS safety alerts')} desc={t('Instant safety alerts by SMS')} value={prefs.sms} onChange={set('sms')} />
+          <ToggleRow label={t('Push notifications')} desc={t('Alerts on your device')} value={prefs.push} onChange={set('push')} />
         </div>
       </Card>
 
       <Card className="overflow-hidden">
         <SectionHeader
           icon={<SettingsIcon size={20} />}
-          title="Preferences"
-          desc="Language and currency used across the app"
+          title={t('Preferences')}
+          desc={t('Language and currency used across the app')}
         />
         <div className="grid grid-cols-1 gap-4 px-6 py-5 sm:grid-cols-2">
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-ink">Language</span>
+            <span className="mb-1.5 block text-sm font-medium text-ink">{t('Language')}</span>
             <select
               value={language}
-              onChange={(e) => setLang(Number(e.target.value))}
+              onChange={(e) => setLang(e.target.value as typeof language)}
               className={SELECT_CLASS}
             >
-              {LANGUAGES.map((name, idx) => (
-                <option key={name} value={idx}>{name}</option>
+              {APP_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>{l.label}</option>
               ))}
             </select>
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-ink">Currency</span>
+            <span className="mb-1.5 block text-sm font-medium text-ink">{t('Currency')}</span>
             <select className={SELECT_CLASS}>
               <option>GH₵ (Cedi)</option>
               <option>USD</option>

@@ -2,12 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Shield, Eye, EyeOff, Lock, Fingerprint, BadgeCheck } from 'lucide-react'
 import { useAuthStore } from '../store'
+import { api, ApiError } from '../api/client'
 
-const DEMO_ACCOUNTS = [
-  { label: 'Registration Officer', email: 'officer@tripnest.gh', password: 'officer123' },
-  { label: 'Super Admin', email: 'admin@tripnest.gh', password: 'admin123' },
-  { label: 'Verification Officer', email: 'verify@tripnest.gh', password: 'verify123' },
-]
+// Seeded by the backend in the Development environment.
+const DEMO_ACCOUNT = { label: 'Super Admin (dev seed)', email: 'admin@tripnest.com', password: 'Admin@123' }
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -15,18 +13,22 @@ export default function Login() {
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { login } = useAuthStore()
+  const { setAuth } = useAuthStore()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-    await new Promise(r => setTimeout(r, 600))
-    const ok = login(email, password)
-    if (ok) navigate('/dashboard')
-    else setError('Invalid email or password.')
-    setLoading(false)
+    try {
+      const login = await api.auth.login(email, password)
+      setAuth(login)
+      navigate('/dashboard')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Login failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -63,20 +65,18 @@ export default function Login() {
           </div>
 
           <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-            <p className="text-xs font-semibold text-white mb-2.5">Demo accounts — click to fill</p>
-            <div className="space-y-1.5">
-              {DEMO_ACCOUNTS.map(acc => (
-                <button
-                  key={acc.email}
-                  type="button"
-                  onClick={() => { setEmail(acc.email); setPassword(acc.password); setError('') }}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left cursor-pointer"
-                >
-                  <span className="text-xs text-slate-300">{acc.label}</span>
-                  <span className="text-[10px] font-mono text-slate-500">{acc.email}</span>
-                </button>
-              ))}
-            </div>
+            <p className="text-xs font-semibold text-white mb-2.5">Demo account — click to fill</p>
+            <button
+              type="button"
+              onClick={() => { setEmail(DEMO_ACCOUNT.email); setPassword(DEMO_ACCOUNT.password); setError('') }}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left cursor-pointer"
+            >
+              <span className="text-xs text-slate-300">{DEMO_ACCOUNT.label}</span>
+              <span className="text-[10px] font-mono text-slate-500">{DEMO_ACCOUNT.email}</span>
+            </button>
+            <p className="text-[10px] text-slate-500 mt-2">
+              Registration &amp; verification officers are created by the admin under Settings.
+            </p>
           </div>
         </div>
 
@@ -91,7 +91,7 @@ export default function Login() {
               <input
                 type="email"
                 className="input"
-                placeholder="officer@tripnest.gh"
+                placeholder="admin@tripnest.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required

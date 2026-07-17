@@ -31,7 +31,7 @@ export async function getTenantDashboard(): Promise<TenantDashboard> {
     },
     upcoming: {
       title: nextProperty?.title ?? (next ? 'Upcoming stay' : 'No upcoming stay'),
-      bookingId: next?.bookingId ?? '',
+      bookingId: next?.id ?? '',
       propertyId: next?.propertyId ?? '',
       location: nextProperty?.location ?? '',
       dates: next ? `${formatIsoDate(next.checkInDate)} – ${formatIsoDate(next.checkOutDate)}` : '—',

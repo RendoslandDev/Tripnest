@@ -5,6 +5,7 @@ import { useSession } from '../../store/authStore';
 import { homeForRole, profilePathForRole } from '../../lib/roleHome';
 import { getUnreadCountCached } from '../../api/notifications';
 import { useAsync } from '../../hooks/useAsync';
+import { useT } from '../../lib/i18n';
 import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
 
@@ -22,7 +23,8 @@ const activeItem = 'bg-brand-50 text-brand';
 
 export default function TenantSidebar({ open, onClose, desktopHidden = false }: TenantSidebarProps) {
   const session = useSession();
-  const name = session?.name ?? 'Guest';
+  const t = useT();
+  const name = session?.name ?? t('Guest');
 
   // Non-tenant roles browsing the marketplace don't get the tenant-role-only
   // pages (their APIs 403 for them) — they get a link back to their workspace.
@@ -32,7 +34,9 @@ export default function TenantSidebar({ open, onClose, desktopHidden = false }: 
         .map((g) => ({ ...g, items: g.items.filter((i) => !TENANT_ROLE_PATHS.has(i.path)) }))
         .filter((g) => g.items.length > 0)
     : TENANT_NAV;
-  const roleLabel = session ? session.role.charAt(0).toUpperCase() + session.role.slice(1) : 'Browse as guest';
+  const roleLabel = session
+    ? t(session.role.charAt(0).toUpperCase() + session.role.slice(1))
+    : t('Browse as guest');
 
   // Live unread count for the Notifications badge (signed-in users only).
   const unread = useAsync(
@@ -74,14 +78,14 @@ export default function TenantSidebar({ open, onClose, desktopHidden = false }: 
               className={`${baseItem} ${inactiveItem}`}
             >
               <span className="flex shrink-0 items-center justify-center"><GridIcon /></span>
-              <span className="flex-1">My workspace</span>
+              <span className="flex-1">{t('My workspace')}</span>
             </NavLink>
           )}
           {nav.map((group, gi) => (
             <div key={gi}>
               {group.heading && (
                 <p className="px-3 pt-5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                  {group.heading}
+                  {t(group.heading)}
                 </p>
               )}
               {group.items.map((item) => (
@@ -95,7 +99,7 @@ export default function TenantSidebar({ open, onClose, desktopHidden = false }: 
                   }
                 >
                   <span className="flex shrink-0 items-center justify-center">{item.icon}</span>
-                  <span className="flex-1">{item.label}</span>
+                  <span className="flex-1">{t(item.label)}</span>
                   {(item.badge ?? badgeFor(item.path)) != null && (
                     <span className="rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-white">
                       {item.badge ?? badgeFor(item.path)}
@@ -109,13 +113,13 @@ export default function TenantSidebar({ open, onClose, desktopHidden = false }: 
 
         {!session && (
           <div className="mt-6 rounded-xl bg-brand p-4 text-white">
-            <p className="font-semibold">Become a Host</p>
+            <p className="font-semibold">{t('Become a Host')}</p>
             <p className="mt-1 text-xs text-white/80">
-              Create a landlord account and start earning today!
+              {t('Create a landlord account and start earning today!')}
             </p>
             <NavLink to="/welcome" onClick={onClose} className="no-underline">
               <Button className="mt-3 bg-white! text-brand! hover:bg-white/90!" size="sm">
-                Get Started
+                {t('Get Started')}
               </Button>
             </NavLink>
           </div>
@@ -128,7 +132,7 @@ export default function TenantSidebar({ open, onClose, desktopHidden = false }: 
         >
           <Avatar name={name} size={36} />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold text-ink">{session ? name : 'Sign in'}</span>
+            <span className="block truncate text-sm font-semibold text-ink">{session ? name : t('Sign in')}</span>
             <span className="block text-xs text-muted">{roleLabel}</span>
           </span>
           <ChevronDownIcon size={16} className="text-muted" />

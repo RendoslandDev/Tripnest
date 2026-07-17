@@ -1,12 +1,30 @@
-import { Shield } from 'lucide-react'
-import type { Citizen, IDCard } from '../../types'
+import { Shield, UserRound } from 'lucide-react'
+import { fmtDate } from '../../lib/format'
 
-interface Props {
-  citizen: Citizen
-  card: IDCard
+export interface CardCitizenInfo {
+  firstName: string
+  middleName?: string
+  lastName: string
+  dateOfBirth: string
+  nationality: string
+  gender: string
+  maritalStatus: string
+  nin?: string
 }
 
-export default function IDCardFront({ citizen, card }: Props) {
+export interface CardInfo {
+  cardId: string
+  dateCreated: string
+  expiryDate: string
+}
+
+interface Props {
+  citizen: CardCitizenInfo
+  card: CardInfo
+  photoSrc?: string | null
+}
+
+export default function IDCardFront({ citizen, card, photoSrc }: Props) {
   return (
     <div
       id="id-card-front"
@@ -34,11 +52,17 @@ export default function IDCardFront({ citizen, card }: Props) {
 
       {/* Body */}
       <div className="flex px-4 pt-2 gap-3">
-        <img
-          src={citizen.photoUrl}
-          alt="citizen"
-          className="w-16 h-20 object-cover rounded-md border-2 border-blue-400/50 flex-shrink-0"
-        />
+        {photoSrc ? (
+          <img
+            src={photoSrc}
+            alt="citizen"
+            className="w-16 h-20 object-cover rounded-md border-2 border-blue-400/50 flex-shrink-0"
+          />
+        ) : (
+          <div className="w-16 h-20 rounded-md border-2 border-blue-400/50 flex-shrink-0 bg-blue-900/40 flex items-center justify-center">
+            <UserRound size={28} className="text-blue-300" />
+          </div>
+        )}
         <div className="flex-1 space-y-1">
           <div>
             <p className="text-[9px] text-blue-300 uppercase">Full Name</p>
@@ -48,7 +72,7 @@ export default function IDCardFront({ citizen, card }: Props) {
           </div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1">
             {[
-              ['Date of Birth', citizen.dateOfBirth],
+              ['Date of Birth', fmtDate(citizen.dateOfBirth)],
               ['Nationality', citizen.nationality],
               ['Gender', citizen.gender],
               ['Marital Status', citizen.maritalStatus],
@@ -60,7 +84,7 @@ export default function IDCardFront({ citizen, card }: Props) {
             ))}
           </div>
           <div>
-            <p className="text-[9px] text-blue-300 uppercase">ID Number</p>
+            <p className="text-[9px] text-blue-300 uppercase">Card ID</p>
             <p className="text-sm font-bold text-yellow-300 font-mono">{card.cardId}</p>
           </div>
         </div>
@@ -68,8 +92,8 @@ export default function IDCardFront({ citizen, card }: Props) {
 
       {/* Footer */}
       <div className="absolute bottom-0 left-0 right-0 px-4 py-1.5 bg-blue-900/50 flex justify-between text-[9px] text-blue-200">
-        <span>Date Created: <strong className="text-white">{card.dateCreated}</strong></span>
-        <span>Expiry Date: <strong className="text-white">{card.expiryDate}</strong></span>
+        <span>Date Created: <strong className="text-white">{fmtDate(card.dateCreated)}</strong></span>
+        <span>Expiry Date: <strong className="text-white">{fmtDate(card.expiryDate)}</strong></span>
       </div>
     </div>
   )

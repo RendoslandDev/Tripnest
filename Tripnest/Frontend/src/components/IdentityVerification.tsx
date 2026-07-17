@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   getVerificationStatus, startVerification, type VerificationStatus, type VerificationState,
 } from '../api/verification';
@@ -7,12 +7,11 @@ import { formatIsoDate } from '../api/backend';
 import { refreshSessionFromServer, useSession } from '../store/authStore';
 import { useAsync } from '../hooks/useAsync';
 import Badge from './ui/Badge';
+import SelfieCapture from './SelfieCapture';
 import { ShieldIcon } from './tenant/icons';
 
 const INPUT =
   'w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand';
-const BTN_OUTLINE =
-  'inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-gray-50';
 
 const POLL_MS = 5000;
 
@@ -53,7 +52,6 @@ export default function IdentityVerification({
   const [selfie, setSelfie] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   // The check resolves in the background — poll until it leaves Pending.
   useEffect(() => {
@@ -134,7 +132,7 @@ export default function IdentityVerification({
       {state === 'pending' && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
           <p className="font-semibold">We're checking your details.</p>
-          <p className="mt-0.5">
+          <p className="mt-0.5 border border-black">
             Your Ghana Card and selfie are being matched against the national registry.
             This usually takes under a minute — the result will appear here.
           </p>
@@ -184,21 +182,7 @@ export default function IdentityVerification({
               />
             </label>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              onChange={(e) => setSelfie(e.target.files?.[0] ?? null)}
-              className="hidden"
-            />
-            <button type="button" onClick={() => fileRef.current?.click()} className={BTN_OUTLINE}>
-              {selfie ? 'Change selfie' : 'Upload a selfie'}
-            </button>
-            <span className="text-sm text-muted">
-              {selfie ? selfie.name : 'A clear photo of your face, to match your card.'}
-            </span>
-          </div>
+          <SelfieCapture onCapture={setSelfie} />
           {error && <p className="text-sm text-rose-600" role="alert">{error}</p>}
           <button
             type="button"
@@ -208,7 +192,11 @@ export default function IdentityVerification({
           >
             <ShieldIcon size={15} />
             {submitting ? 'Submitting…' : state === 'rejected' ? 'Try again' : 'Verify my identity'}
-          </button>
+         </button>
+
+        </div>
+      )}
+
                 {onSkip && (
                     <button
                     type="button"
@@ -218,9 +206,7 @@ export default function IdentityVerification({
                     >
                     Skip for now
                     </button>
-        )}
-        </div>
-      )}
+                )}
     </div>
   );
 }

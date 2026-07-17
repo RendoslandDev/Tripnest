@@ -11,6 +11,7 @@ import Avatar from '../../components/ui/Avatar';
 import SafetyCard from '../../components/tenant/SafetyCard';
 import { formatCedi } from '../../lib/format';
 import { useSession } from '../../store/authStore';
+import { useT } from '../../lib/i18n';
 import {
   CalendarIcon, CardIcon, HeartIcon, ToolIcon, SearchIcon, PlusIcon, MessageIcon,
   MapPinIcon,
@@ -38,6 +39,7 @@ function Stat({ label, value, icon }: { label: string; value: string; icon: Reac
 
 function Dashboard({ data }: { data: TenantDashboard }) {
   const session = useSession();
+  const t = useT();
   const firstName = (session?.name ?? 'there').split(' ')[0];
   const [invited, setInvited] = useState(false);
 
@@ -52,24 +54,24 @@ function Dashboard({ data }: { data: TenantDashboard }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-ink">Dashboard</h1>
-          <p className="mt-1 text-muted">Welcome back, {firstName} — here's what's happening with your home.</p>
+          <h1 className="text-3xl font-bold text-ink">{t('Dashboard')}</h1>
+          <p className="mt-1 text-muted">{t('Welcome back')}, {firstName} — {t("here's what's happening with your home.")}</p>
         </div>
-        <span className="rounded-md border border-gray-200 px-2.5 py-1 text-xs text-muted">This Month</span>
+        <span className="rounded-md border border-gray-200 px-2.5 py-1 text-xs text-muted">{t('This Month')}</span>
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="Active Bookings" value={String(data.stats.activeBookings)} icon={<CalendarIcon size={18} />} />
-        <Stat label="Rent Paid" value={formatCedi(data.stats.rentPaid)} icon={<CardIcon size={18} />} />
-        <Stat label="Saved Properties" value={String(data.stats.savedProperties)} icon={<HeartIcon size={18} />} />
-        <Stat label="Open Maintenance" value={String(data.stats.openMaintenance)} icon={<ToolIcon size={18} />} />
+        <Stat label={t('Active Bookings')} value={String(data.stats.activeBookings)} icon={<CalendarIcon size={18} />} />
+        <Stat label={t('Rent Paid')} value={formatCedi(data.stats.rentPaid)} icon={<CardIcon size={18} />} />
+        <Stat label={t('Saved Properties')} value={String(data.stats.savedProperties)} icon={<HeartIcon size={18} />} />
+        <Stat label={t('Open Maintenance')} value={String(data.stats.openMaintenance)} icon={<ToolIcon size={18} />} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_340px]">
         <div className="min-w-0 space-y-6">
           <Card className="p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-ink">Upcoming Booking</h2>
+              <h2 className="text-lg font-bold text-ink">{t('Upcoming Booking')}</h2>
               <Badge tone="green">{data.upcoming.status}</Badge>
             </div>
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -89,7 +91,7 @@ function Dashboard({ data }: { data: TenantDashboard }) {
                   <span className="text-xs font-normal text-muted"> / {data.upcoming.period}</span>
                 </p>
                 <Link to="/bookings" className="no-underline">
-                  <Button size="sm" className="mt-3">View Booking</Button>
+                  <Button size="sm" className="mt-3">{t('View Booking')}</Button>
                 </Link>
               </div>
             </div>
@@ -97,21 +99,21 @@ function Dashboard({ data }: { data: TenantDashboard }) {
 
           <Card className="p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-ink">Maintenance Tracker</h2>
-              <Link to="/maintenance" className="text-xs font-semibold text-brand no-underline">View all</Link>
+              <h2 className="text-lg font-bold text-ink">{t('Maintenance Tracker')}</h2>
+              <Link to="/maintenance" className="text-xs font-semibold text-brand no-underline">{t('View all')}</Link>
             </div>
             <div className="grid grid-cols-3 gap-3 text-center">
               <div className="rounded-lg bg-amber-50 py-3">
                 <p className="text-lg font-bold text-amber-600">{data.maintenance.pending}</p>
-                <p className="text-xs text-muted">Pending</p>
+                <p className="text-xs text-muted">{t('Pending')}</p>
               </div>
               <div className="rounded-lg bg-blue-50 py-3">
                 <p className="text-lg font-bold text-blue-600">{data.maintenance.inProgress}</p>
-                <p className="text-xs text-muted">In Progress</p>
+                <p className="text-xs text-muted">{t('In Progress')}</p>
               </div>
               <div className="rounded-lg bg-brand-50 py-3">
                 <p className="text-lg font-bold text-brand">{data.maintenance.resolved}</p>
-                <p className="text-xs text-muted">Resolved</p>
+                <p className="text-xs text-muted">{t('Resolved')}</p>
               </div>
             </div>
             <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
@@ -125,8 +127,8 @@ function Dashboard({ data }: { data: TenantDashboard }) {
 
           <Card className="p-6">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-ink">Recent Messages</h2>
-              <Link to="/messages" className="text-xs font-semibold text-brand no-underline">View all</Link>
+              <h2 className="text-lg font-bold text-ink">{t('Recent Messages')}</h2>
+              <Link to="/messages" className="text-xs font-semibold text-brand no-underline">{t('View all')}</Link>
             </div>
             <ul className="divide-y divide-gray-100">
               {data.messages.map((m) => (
@@ -147,7 +149,7 @@ function Dashboard({ data }: { data: TenantDashboard }) {
 
         <div className="min-w-0 space-y-6">
           <Card className="p-6">
-            <h2 className="mb-3 text-lg font-bold text-ink">Quick Actions</h2>
+            <h2 className="mb-3 text-lg font-bold text-ink">{t('Quick Actions')}</h2>
             <div className="grid grid-cols-1 gap-2">
               {QUICK_ACTIONS.map((a) => (
                 <Link
@@ -156,7 +158,7 @@ function Dashboard({ data }: { data: TenantDashboard }) {
                   className="flex items-center gap-2 rounded-lg border border-gray-100 px-3 py-2 text-sm font-medium text-gray-700 no-underline hover:bg-gray-50"
                 >
                   <span className="text-brand">{a.icon}</span>
-                  {a.label}
+                  {t(a.label)}
                 </Link>
               ))}
             </div>
@@ -165,10 +167,10 @@ function Dashboard({ data }: { data: TenantDashboard }) {
           <SafetyCard bookingId={data.upcoming.bookingId} />
 
           <Card className="bg-brand p-6 text-white">
-            <h2 className="text-lg font-bold">Invite &amp; Earn</h2>
-            <p className="mt-1 text-sm text-white/80">Invite your friends and earn up to GH₵ 100!</p>
+            <h2 className="text-lg font-bold">{t('Invite & Earn')}</h2>
+            <p className="mt-1 text-sm text-white/80">{t('Invite your friends and earn up to GH₵ 100!')}</p>
             <Button className="mt-3 bg-white text-brand hover:bg-white/90" size="sm" onClick={invite}>
-              {invited ? 'Link copied!' : 'Invite Now'}
+              {invited ? t('Link copied!') : t('Invite Now')}
             </Button>
           </Card>
         </div>

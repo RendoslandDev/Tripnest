@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import IdentityVerification from '../components/IdentityVerification';
 import type { VerificationState } from '../api/verification';
 import { useSession } from '../store/authStore';
@@ -49,7 +49,13 @@ export default function GetVerifiedPage() {
         </p>
 
         <Card className="mt-8 p-6">
-          <IdentityVerification onStateChange={setState} />
+          <IdentityVerification
+            onStateChange={setState}
+            // Skipping is only offered to roles Core doesn't gate on verification.
+            onSkip={!mustVerify && state !== 'verified'
+              ? () => navigate(home, { replace: true })
+              : undefined}
+          />
         </Card>
 
         <div className="mt-6 flex items-center gap-4">
@@ -57,11 +63,6 @@ export default function GetVerifiedPage() {
             <Button onClick={() => navigate(home, { replace: true })}>
               Continue to TripNest
             </Button>
-          )}
-          {!mustVerify && state !== 'verified' && (
-            <Link to={home} className="text-sm font-semibold text-muted no-underline hover:text-ink">
-              Do this later
-            </Link>
           )}
           {mustVerify && state !== 'verified' && (
             <p className="text-sm text-muted">

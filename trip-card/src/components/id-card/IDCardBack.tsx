@@ -1,11 +1,10 @@
-import type { IDCard } from '../../types'
-
 interface Props {
-  card: IDCard
+  card: { cardId: string }
+  nin?: string
 }
 
-export default function IDCardBack({ card }: Props) {
-  // Simple QR placeholder using CSS
+export default function IDCardBack({ card, nin }: Props) {
+  // Simple QR placeholder using CSS (the real QR ships on the PDF from the backend)
   return (
     <div
       id="id-card-back"
@@ -38,6 +37,12 @@ export default function IDCardBack({ card }: Props) {
               <p className="text-[9px] text-slate-400 uppercase">Card ID</p>
               <p className="text-xs font-bold font-mono text-slate-800">{card.cardId}</p>
             </div>
+            {nin && (
+              <div>
+                <p className="text-[9px] text-slate-400 uppercase">National ID Number</p>
+                <p className="text-xs font-bold font-mono text-slate-800">{nin}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

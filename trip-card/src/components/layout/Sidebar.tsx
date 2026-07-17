@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '../../store'
 
+// `roles` limits an item to specific backend roles; omitted = visible to all.
 const NAV_GROUPS = [
   {
     title: 'Overview',
@@ -14,14 +15,14 @@ const NAV_GROUPS = [
     title: 'Registry',
     items: [
       { to: '/citizens', icon: Users, label: 'Citizens' },
-      { to: '/issue-new', icon: FilePlus, label: 'Issue New ID' },
+      { to: '/issue-new', icon: FilePlus, label: 'Register Citizen', roles: ['SuperAdmin', 'RegistrationOfficer'] },
       { to: '/search', icon: Search, label: 'Search ID' },
     ],
   },
   {
     title: 'Workflow',
     items: [
-      { to: '/pending', icon: Clock, label: 'Pending Approval' },
+      { to: '/pending', icon: Clock, label: 'Pending Approval', roles: ['SuperAdmin', 'VerificationOfficer'] },
       { to: '/expired', icon: CreditCard, label: 'Expired Cards' },
     ],
   },
@@ -29,7 +30,7 @@ const NAV_GROUPS = [
     title: 'Insights',
     items: [
       { to: '/reports', icon: BarChart3, label: 'Reports' },
-      { to: '/audit', icon: ScrollText, label: 'Audit Logs' },
+      { to: '/audit', icon: ScrollText, label: 'Audit Logs', roles: ['SuperAdmin'] },
     ],
   },
   {
@@ -39,9 +40,9 @@ const NAV_GROUPS = [
 ]
 
 const ROLE_LABELS: Record<string, string> = {
-  super_admin: 'Super Admin',
-  registration_officer: 'Registration Officer',
-  verification_officer: 'Verification Officer',
+  SuperAdmin: 'Super Admin',
+  RegistrationOfficer: 'Registration Officer',
+  VerificationOfficer: 'Verification Officer',
 }
 
 export default function Sidebar() {
@@ -69,13 +70,17 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 pb-4 space-y-5 overflow-y-auto">
-        {NAV_GROUPS.map(group => (
+        {NAV_GROUPS.map(group => {
+          const visible = group.items.filter(
+            item => !item.roles || (currentUser && item.roles.includes(currentUser.role)))
+          if (visible.length === 0) return null
+          return (
           <div key={group.title}>
             <p className="px-3 mb-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
               {group.title}
             </p>
             <div className="space-y-0.5">
-              {group.items.map(({ to, icon: Icon, label }) => (
+              {visible.map(({ to, icon: Icon, label }) => (
                 <NavLink
                   key={to}
                   to={to}
@@ -93,17 +98,18 @@ export default function Sidebar() {
               ))}
             </div>
           </div>
-        ))}
+          )
+        })}
       </nav>
 
       {/* User + Logout */}
       <div className="px-3 py-4 border-t border-white/5">
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5">
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-            {currentUser?.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
+            {currentUser?.fullName.split(' ').map(w => w[0]).slice(0, 2).join('')}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white text-[13px] font-semibold truncate">{currentUser?.name}</p>
+            <p className="text-white text-[13px] font-semibold truncate">{currentUser?.fullName}</p>
             <p className="text-slate-500 text-[11px] truncate">{ROLE_LABELS[currentUser?.role || '']}</p>
           </div>
           <button

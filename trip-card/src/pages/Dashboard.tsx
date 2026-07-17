@@ -1,72 +1,66 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { Users, TrendingUp, Clock, XCircle, FilePlus, Search, ArrowRight } from 'lucide-react'
-import { useDataStore, useAuthStore } from '../store'
+import { useAuthStore } from '../store'
+import { api, ApiError } from '../api/client'
+import { fmtDate } from '../lib/format'
+import { CitizenAvatar } from '../components/CitizenPhoto'
+import type { DashboardStats, RecentRegistration } from '../types'
 
-const PIE_COLORS = ['#3B82F6', '#F59E0B', '#94A3B8', '#EF4444']
-
-const BADGE_CLASS: Record<string, string> = {
-  'Active': 'badge-active',
-  'Expiring Soon': 'badge-expiring',
-  'Inactive': 'badge-inactive',
-  'Revoked': 'badge-revoked',
-  'Pending': 'badge-pending',
-}
-
-const StatusBadge = ({ status }: { status: string }) => (
-  <span className={`badge ${BADGE_CLASS[status] || 'badge-inactive'}`}>{status}</span>
-)
+const PIE_COLORS = ['#3B82F6', '#F59E0B', '#EF4444']
 
 export default function Dashboard() {
-  const { cards, citizens } = useDataStore()
   const { currentUser } = useAuthStore()
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [recent, setRecent] = useState<RecentRegistration[]>([])
+  const [error, setError] = useState('')
   const [greeting] = useState(() => {
     const h = new Date().getHours()
     return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
   })
 
-  const active = cards.filter(c => c.status === 'Active').length
-  const expiring = cards.filter(c => c.status === 'Expiring Soon').length
-  const inactive = cards.filter(c => c.status === 'Inactive').length
-  const revoked = cards.filter(c => c.status === 'Revoked').length
-  const pending = cards.filter(c => c.status === 'Pending').length
-  const total = cards.length
+  useEffect(() => {
+    Promise.all([api.dashboard.stats(), api.dashboard.recentRegistrations()])
+      .then(([s, r]) => { setStats(s); setRecent(r) })
+      .catch(err => setError(err instanceof ApiError ? err.message : 'Failed to load dashboard'))
+  }, [])
+
+  const total = stats?.totalIds ?? 0
+  const pending = stats?.pendingVerifications ?? 0
 
   const pieData = [
-    { name: 'Active', value: active },
-    { name: 'Expiring Soon', value: expiring },
-    { name: 'Inactive', value: inactive },
-    { name: 'Revoked', value: revoked },
+    { name: 'Active', value: stats?.activeCards ?? 0 },
+    { name: 'Expiring Soon', value: stats?.expiringSoon ?? 0 },
+    { name: 'Inactive / Revoked', value: stats?.inactiveRevoked ?? 0 },
   ]
 
-  const recent = [...cards]
-    .filter(c => c.status !== 'Pending')
-    .slice(-5)
-    .reverse()
-
-  const stats = [
+  const statCards = [
     { label: 'Total IDs Issued', value: total, sub: 'All time', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Active Cards', value: active, sub: total ? `${Math.round(active / total * 100)}% of total` : '—', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Expiring Soon', value: expiring, sub: 'Next 30 days', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Inactive / Revoked', value: inactive + revoked, sub: 'All time', icon: XCircle, color: 'text-red-500', bg: 'bg-red-50' },
+    { label: 'Active Cards', value: stats?.activeCards ?? 0, sub: total ? `${Math.round((stats?.activeCards ?? 0) / total * 100)}% of total` : '—', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Expiring Soon', value: stats?.expiringSoon ?? 0, sub: 'Next 30 days', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Inactive / Revoked', value: stats?.inactiveRevoked ?? 0, sub: 'All time', icon: XCircle, color: 'text-red-500', bg: 'bg-red-50' },
   ]
 
   return (
     <div className="p-8 space-y-6">
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-100 px-3.5 py-2.5 rounded-xl">{error}</p>
+      )}
+
       {/* Welcome banner */}
       <div className="rounded-2xl bg-gradient-to-r from-navy-900 to-blue-800 text-white p-7 flex items-center justify-between shadow-lg shadow-blue-900/20">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">{greeting}, {currentUser?.name.split(' ')[0]} 👋</h2>
+          <h2 className="text-xl font-bold tracking-tight">{greeting}, {currentUser?.fullName.split(' ')[0]} 👋</h2>
           <p className="text-blue-200 text-sm mt-1">
             {pending > 0
-              ? `You have ${pending} application${pending === 1 ? '' : 's'} waiting for approval.`
+              ? `You have ${pending} application${pending === 1 ? '' : 's'} waiting for review.`
               : 'All applications are up to date. Nothing pending.'}
           </p>
         </div>
         <div className="flex gap-3">
           <Link to="/issue-new" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-blue-900 hover:bg-blue-50 transition-colors shadow-sm">
-            <FilePlus size={16} /> Issue New ID
+            <FilePlus size={16} /> Register Citizen
           </Link>
           <Link to="/search" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors">
             <Search size={16} /> Search
@@ -76,7 +70,7 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        {stats.map(({ label, value, sub, icon: Icon, color, bg }) => (
+        {statCards.map(({ label, value, sub, icon: Icon, color, bg }) => (
           <div key={label} className="card p-5 flex items-start justify-between hover:shadow-md transition-shadow">
             <div>
               <p className="text-[28px] leading-none font-bold text-slate-900 tracking-tight">{value.toLocaleString()}</p>
@@ -104,29 +98,32 @@ export default function Dashboard() {
             <thead className="bg-slate-50/70 border-y border-slate-100">
               <tr>
                 <th className="th">Citizen</th>
-                <th className="th">Card ID</th>
-                <th className="th">Date Created</th>
-                <th className="th">Status</th>
+                <th className="th">Gender</th>
+                <th className="th">Date of Birth</th>
+                <th className="th">Registered</th>
               </tr>
             </thead>
             <tbody>
-              {recent.map(card => {
-                const citizen = citizens.find(c => c.id === card.citizenId)
-                if (!citizen) return null
-                return (
-                  <tr key={card.cardId} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60 transition-colors">
-                    <td className="td">
-                      <div className="flex items-center gap-3">
-                        <img src={citizen.photoUrl} alt="" className="w-8 h-8 rounded-full object-cover ring-2 ring-slate-100" />
-                        <span className="font-semibold text-slate-800">{citizen.firstName} {citizen.lastName}</span>
-                      </div>
-                    </td>
-                    <td className="td font-mono text-xs">{card.cardId}</td>
-                    <td className="td text-xs">{card.dateCreated}</td>
-                    <td className="td"><StatusBadge status={card.status} /></td>
-                  </tr>
-                )
-              })}
+              {recent.map(reg => (
+                <tr key={reg.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60 transition-colors">
+                  <td className="td">
+                    <div className="flex items-center gap-3">
+                      <CitizenAvatar citizenId={reg.id} name={reg.fullName} />
+                      <span className="font-semibold text-slate-800">{reg.fullName}</span>
+                    </div>
+                  </td>
+                  <td className="td text-xs">{reg.gender}</td>
+                  <td className="td text-xs">{fmtDate(reg.dateOfBirth)}</td>
+                  <td className="td text-xs">{fmtDate(reg.createdAt)}</td>
+                </tr>
+              ))}
+              {recent.length === 0 && (
+                <tr>
+                  <td className="td text-center text-slate-400 text-sm py-8" colSpan={4}>
+                    No registrations yet — register the first citizen to get started.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

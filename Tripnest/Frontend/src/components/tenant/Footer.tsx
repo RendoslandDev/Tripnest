@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useT } from '../../lib/i18n';
 import {
   FacebookIcon,
   HexIcon,
@@ -9,6 +10,7 @@ import {
   TwitterIcon,
 } from './icons';
 
+// Column headings run through i18n at render time.
 const COLUMNS: { heading: string; links: { label: string; to: string }[] }[] = [
   {
     heading: 'Explore',
@@ -58,6 +60,7 @@ function FooterLink({ label, to }: { label: string; to: string }) {
 }
 
 export default function Footer() {
+  const t = useT();
   return (
     <footer className="bg-white text-black">
       {/* Brand accent line */}
@@ -100,7 +103,7 @@ export default function Footer() {
             {COLUMNS.map((col) => (
               <div key={col.heading}>
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-black">
-                  {col.heading}
+                  {t(col.heading)}
                 </h3>
                 <ul className="space-y-2.5">
                   {col.links.map((l) => (

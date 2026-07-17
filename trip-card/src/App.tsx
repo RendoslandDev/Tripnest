@@ -9,8 +9,8 @@ import { Citizens, ExpiredCards, Reports, AuditLogs, Settings } from './pages/mi
 import DashboardLayout from './components/layout/DashboardLayout'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { currentUser } = useAuthStore()
-  return currentUser ? <>{children}</> : <Navigate to="/login" replace />
+  const { token, currentUser } = useAuthStore()
+  return token && currentUser ? <>{children}</> : <Navigate to="/login" replace />
 }
 
 export default function App() {

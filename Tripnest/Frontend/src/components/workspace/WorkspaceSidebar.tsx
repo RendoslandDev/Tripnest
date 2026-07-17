@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { HexIcon } from '../tenant/icons';
 import { useSession } from '../../store/authStore';
+import { useT } from '../../lib/i18n';
 import Avatar from '../ui/Avatar';
 
 export interface WorkspaceNavItem {
@@ -40,7 +41,8 @@ export default function WorkspaceSidebar({
   nav, roleLabel, accountPath, open, onClose, desktopHidden = false,
 }: WorkspaceSidebarProps) {
   const session = useSession();
-  const name = session?.name ?? 'Guest';
+  const t = useT();
+  const name = session?.name ?? t('Guest');
   return (
     <>
       {open && (
@@ -75,7 +77,7 @@ export default function WorkspaceSidebar({
                     }
                   >
                     <span className="flex shrink-0 items-center justify-center">{item.icon}</span>
-                    <span className="flex-1">{item.label}</span>
+                    <span className="flex-1">{t(item.label)}</span>
                     {item.badge != null && (
                       <span className="rounded-full bg-ink px-2 py-0.5 text-[11px] font-semibold text-white">
                         {item.badge}
@@ -96,7 +98,7 @@ export default function WorkspaceSidebar({
           <Avatar name={name} size={36} />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-semibold text-ink">{name}</span>
-            <span className="block text-xs text-muted">{roleLabel}</span>
+            <span className="block text-xs text-muted">{t(roleLabel)}</span>
           </span>
         </NavLink>
       </aside>
