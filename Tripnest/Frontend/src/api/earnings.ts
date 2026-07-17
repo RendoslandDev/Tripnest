@@ -1,5 +1,5 @@
 import type { EarningsSummary, EarningStatus, EarningTxn, PayoutAccount } from '../types';
-import { ApiError, apiGet, apiPost, apiPut } from './client';
+import { ApiError, apiGet, apiGetList, apiPost, apiPut } from './client';
 import {
   formatIsoDate,
   type LandlordBookingResponseDto,
@@ -36,7 +36,7 @@ function mapPayout(dto: PayoutResponseDto, booking?: LandlordBookingResponseDto)
 export async function getEarnings(): Promise<EarningsSummary> {
   const [dto, payouts, bookings] = await Promise.all([
     apiGet<LandlordEarningsDto>('/api/landlord/earnings'),
-    apiGet<PayoutResponseDto[]>('/api/payouts/mine').catch(() => [] as PayoutResponseDto[]),
+    apiGetList<PayoutResponseDto>('/api/payouts/mine').catch(() => [] as PayoutResponseDto[]),
     apiGet<PagedResultDto<LandlordBookingResponseDto>>('/api/landlord/bookings?page=1&pageSize=50')
       .catch(() => null),
   ]);

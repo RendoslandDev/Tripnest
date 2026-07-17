@@ -1,9 +1,9 @@
 import type { Listing } from '../types';
-import { apiGet, apiPost, apiPut, apiUpload } from './client';
+import { apiGet, apiGetList, apiPost, apiPut, apiUpload } from './client';
 import { mapListing, type ListingCopySuggestionDto, type PropertyResponseDto } from './backend';
 
 export async function getListings(): Promise<Listing[]> {
-  const dtos = await apiGet<PropertyResponseDto[]>('/api/properties/user/my-properties');
+  const dtos = await apiGetList<PropertyResponseDto>('/api/properties/user/my-properties');
   return dtos.map(mapListing);
 }
 

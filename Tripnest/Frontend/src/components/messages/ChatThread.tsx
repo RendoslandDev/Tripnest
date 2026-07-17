@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Conversation } from '../../types';
-import { getMessages, sendMessage, suggestReply } from '../../api/messages';
+import { getMessages, sendAttachment, sendMessage, suggestReply } from '../../api/messages';
 import { mapMessage, timeAgo } from '../../api/backend';
 import { getSession } from '../../store/authStore';
 import {
@@ -227,6 +227,16 @@ export default function ChatThread({ conversation, onBack, className = '' }: Cha
                         >
                           {item.audioUrl ? (
                             <VoicePlayer url={item.audioUrl} duration={item.duration ?? 0} mine={item.fromMe} />
+                          ) : item.mediaUrl && item.mediaType?.startsWith('audio') ? (
+                            <VoicePlayer url={item.mediaUrl} duration={item.duration ?? 0} mine={item.fromMe} />
+                          ) : item.mediaUrl && item.mediaType?.startsWith('image') ? (
+                            <a href={item.mediaUrl} target="_blank" rel="noreferrer">
+                              <img src={item.mediaUrl} alt={item.text || 'Attachment'} className="max-h-48 rounded-lg" />
+                            </a>
+                          ) : item.mediaUrl ? (
+                            <a href={item.mediaUrl} target="_blank" rel="noreferrer" className="break-all underline">
+                              {item.text || 'Attachment'}
+                            </a>
                           ) : (
                             <p className="whitespace-pre-wrap break-words">{item.text}</p>
                           )}
@@ -245,8 +255,31 @@ export default function ChatThread({ conversation, onBack, className = '' }: Cha
 
         <Composer
           onSendText={send}
-          onSendVoice={(audioUrl, duration) => append({ text: '', audioUrl, duration })}
-          onAttach={(file) => append({ text: `📎 ${file.name}` })}
+          onSendVoice={async (audioUrl, duration) => {
+            // Local bubble immediately; the recording then uploads like any attachment.
+            append({ text: '', audioUrl, duration });
+            try {
+              const blob = await fetch(audioUrl).then((r) => r.blob());
+              const ext = (blob.type.split('/')[1] || 'webm').split(';')[0];
+              await sendAttachment(conversation.id, new File([blob], `voice-note.${ext}`, { type: blob.type || 'audio/webm' }));
+            } catch {
+              setBanner('Voice note failed to send.');
+            }
+          }}
+          onAttach={async (file) => {
+            const tempId = `pending-${Date.now()}`;
+            setSent((s) => [...s, { id: tempId, fromMe: true, time: 'Sending…', text: `📎 ${file.name}` }]);
+            try {
+              const saved = await sendAttachment(conversation.id, file);
+              setSent((s) => {
+                if (s.some((m) => m.id === saved.id)) return s.filter((m) => m.id !== tempId);
+                return s.map((m) => (m.id === tempId ? saved : m));
+              });
+            } catch {
+              setSent((s) => s.filter((m) => m.id !== tempId));
+              setBanner('Attachment failed to send.');
+            }
+          }}
           onNotice={setBanner}
           suggest={() => suggestReply(conversation.id)}
           onTyping={handleTyping}

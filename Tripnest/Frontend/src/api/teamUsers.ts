@@ -1,12 +1,12 @@
 import type { TeamRole, TeamUser, TeamUserStatus } from '../types';
-import { apiDelete, apiGet, apiPatch, apiPost } from './client';
+import { apiDelete, apiGetList, apiPatch, apiPost } from './client';
 import { mapTeamMember, type TeamMemberResponseDto } from './backend';
 import { teamRoleToApi } from '../lib/enums';
 
 // Host team management, backed by TripNest.Core's /api/team.
 
 export async function getTeamUsers(): Promise<TeamUser[]> {
-  const dtos = await apiGet<TeamMemberResponseDto[]>('/api/team');
+  const dtos = await apiGetList<TeamMemberResponseDto>('/api/team');
   return dtos.map(mapTeamMember);
 }
 

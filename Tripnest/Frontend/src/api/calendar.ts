@@ -1,5 +1,5 @@
 import type { CalendarBooking, CalendarMonth, Listing } from '../types';
-import { apiGet } from './client';
+import { apiGetList } from './client';
 import type { BlockedDateDto } from './backend';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -18,7 +18,7 @@ export function getAvailableRanges(
   fromISO: string,
   toISO: string,
 ): Promise<DateRangeDto[]> {
-  return apiGet<DateRangeDto[]>(
+  return apiGetList<DateRangeDto>(
     `/api/properties/${propertyId}/available-ranges?from=${fromISO}&to=${toISO}`,
   );
 }
@@ -54,7 +54,7 @@ export async function getCalendarMonth(
   const monthStart = iso(year, monthIndex, 1);
   const monthEnd = iso(year, monthIndex, daysInMonth);
   const [blocked, openRanges] = await Promise.all([
-    apiGet<BlockedDateDto[]>(
+    apiGetList<BlockedDateDto>(
       `/api/properties/${listing.id}/availability?startDate=${monthStart}&endDate=${monthEnd}`,
     ),
     getAvailableRanges(listing.id, monthStart, monthEnd),

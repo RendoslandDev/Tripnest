@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiUpload } from './client';
+import { apiDelete, apiGetList, apiPatch, apiUpload } from './client';
 
 // Walkthrough video endpoints on TripNest.Core. Quirks the UI must respect:
 // video bytes are unreachable today (no static serving / streaming endpoint),
@@ -16,7 +16,7 @@ export interface WalkthroughResponseDto {
 }
 
 export function getWalkthroughs(propertyId: string): Promise<WalkthroughResponseDto[]> {
-  return apiGet<WalkthroughResponseDto[]>(`/api/properties/${propertyId}/walkthroughs`);
+  return apiGetList<WalkthroughResponseDto>(`/api/properties/${propertyId}/walkthroughs`);
 }
 
 /** Upload a generated clip for review (owner only). */
@@ -55,7 +55,7 @@ export interface PropertyWalkthroughStatusDto {
 }
 
 export function getPendingWalkthroughs(): Promise<PropertyWalkthroughStatusDto[]> {
-  return apiGet<PropertyWalkthroughStatusDto[]>('/api/properties/pending-walkthroughs');
+  return apiGetList<PropertyWalkthroughStatusDto>('/api/properties/pending-walkthroughs');
 }
 
 export function reviewWalkthrough(

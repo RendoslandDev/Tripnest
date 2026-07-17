@@ -1,5 +1,5 @@
 import type { Trip, TripStatus } from '../types';
-import { apiGet } from './client';
+import { apiGet, apiGetList, apiPost } from './client';
 import { formatIsoDate, type BookingResponseDto } from './backend';
 import { getProperties } from './properties';
 
@@ -21,7 +21,7 @@ function nightsBetween(checkInIso: string, checkOutIso: string): number {
 
 export async function getTrips(): Promise<Trip[]> {
   const [dtos, properties] = await Promise.all([
-    apiGet<BookingResponseDto[]>('/api/bookings/user/my-bookings'),
+    apiGetList<BookingResponseDto>('/api/bookings/user/my-bookings'),
     getProperties().catch(() => []),
   ]);
   const byId = new Map(properties.map((p) => [p.id, p]));
@@ -29,6 +29,7 @@ export async function getTrips(): Promise<Trip[]> {
     const property = byId.get(dto.propertyId);
     return {
       id: dto.bookingId,
+      propertyId: dto.propertyId,
       destination: property?.location ?? 'Ghana',
       property: property?.title ?? 'Property',
       checkIn: formatIsoDate(dto.checkInDate),
@@ -40,4 +41,20 @@ export async function getTrips(): Promise<Trip[]> {
       coverColor: COVER_COLORS[i % COVER_COLORS.length],
     };
   });
+}
+
+/** What the backend would refund if this trip were cancelled right now (no state change). */
+export interface RefundPreview {
+  refundPercentage: number;
+  refundAmount: number;
+  policyName: string;
+  daysUntilCheckIn: number;
+}
+
+export function getCancellationPreview(bookingId: string): Promise<RefundPreview> {
+  return apiGet<RefundPreview>(`/api/bookings/${bookingId}/cancellation-preview`);
+}
+
+export function cancelTrip(bookingId: string): Promise<unknown> {
+  return apiPost(`/api/bookings/${bookingId}/cancel`);
 }

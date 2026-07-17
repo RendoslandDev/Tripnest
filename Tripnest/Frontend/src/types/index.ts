@@ -151,6 +151,10 @@ export interface ChatMessage {
   fromMe: boolean;
   text: string;
   time: string;
+  /** Absolute URL of an attachment (image / voice note / document); unset for plain text. */
+  mediaUrl?: string;
+  /** MIME type of the attachment, e.g. image/jpeg, audio/webm, application/pdf. */
+  mediaType?: string;
 }
 
 export type NotificationType = 'booking' | 'payment' | 'maintenance' | 'message' | 'safety';
@@ -406,6 +410,7 @@ export type TripStatus = 'upcoming' | 'completed' | 'canceled';
 
 export interface Trip {
   id: string;
+  propertyId: string;
   destination: string;
   property: string;
   checkIn: string;

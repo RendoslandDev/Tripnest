@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { Agreement, AgreementStatus } from '../../types';
-import { getAgreements } from '../../api/agreements';
+import {
+  downloadAgreementPdf, getAgreements, getAgreementSummary, signAgreement, type AgreementSummary,
+} from '../../api/agreements';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import Card from '../../components/ui/Card';
@@ -15,31 +17,52 @@ const STATUS: Record<AgreementStatus, { tone: BadgeTone; label: string }> = {
   expired: { tone: 'gray', label: 'Expired' },
 };
 
-/** Render an agreement as plain text and trigger a browser download. */
-function downloadAgreement(a: Agreement) {
-  const body = [
-    'TRIPNEST TENANCY AGREEMENT',
-    '==========================',
-    `Reference: ${a.id}`,
-    `Property:  ${a.property}`,
-    `Landlord:  ${a.landlord}`,
-    `Term:      ${a.startDate} – ${a.endDate}`,
-    `Rent:      GH₵ ${a.rent.toLocaleString('en-GH')} / ${a.period}`,
-    `Status:    ${STATUS[a.status].label}`,
-  ].join('\n');
-  const url = URL.createObjectURL(new Blob([body], { type: 'text/plain' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${a.id}-agreement.txt`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 function AgreementsView({ initial }: { initial: Agreement[] }) {
   const [rows, setRows] = useState(initial);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [summary, setSummary] = useState<{ id: string; data: AgreementSummary } | null>(null);
 
-  const sign = (id: string) =>
-    setRows((rs) => rs.map((a) => (a.id === id ? { ...a, status: 'active' } : a)));
+  // Signing stamps the caller's stored profile signature onto the document server-side.
+  const sign = async (id: string) => {
+    setBusyId(id);
+    setNote(null);
+    try {
+      await signAgreement(id);
+      setRows((rs) => rs.map((a) => (a.id === id ? { ...a, status: 'active' } : a)));
+      setNote('Signed. Your stored signature has been applied to the document.');
+    } catch (e) {
+      // The common rejection: no signature image on the profile yet.
+      setNote(e instanceof Error ? e.message : 'Could not sign the agreement.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const download = async (id: string) => {
+    setBusyId(id);
+    setNote(null);
+    try {
+      await downloadAgreementPdf(id);
+    } catch {
+      setNote('Could not download the agreement PDF.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const explain = async (id: string) => {
+    if (summary?.id === id) { setSummary(null); return; }
+    setBusyId(id);
+    setNote(null);
+    try {
+      setSummary({ id, data: await getAgreementSummary(id) });
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : 'The AI explanation is unavailable right now.');
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -58,21 +81,47 @@ function AgreementsView({ initial }: { initial: Agreement[] }) {
               {a.startDate} – {a.endDate} · {formatCedi(a.rent)} / {a.period}
             </p>
           </div>
-          <div className="flex gap-2">
-            {a.status === 'pending' ? (
-              <>
-                <Button size="sm" onClick={() => sign(a.id)}>Review &amp; sign</Button>
-                <Button size="sm" variant="ghost" onClick={() => downloadAgreement(a)}>Download</Button>
-              </>
-            ) : (
-              <>
-                <Button size="sm" variant="ghost" onClick={() => downloadAgreement(a)}>View</Button>
-                <Button size="sm" variant="ghost" onClick={() => downloadAgreement(a)}>Download</Button>
-              </>
+          <div className="flex flex-wrap gap-2">
+            {a.status === 'pending' && (
+              <Button size="sm" disabled={busyId === a.id} onClick={() => { void sign(a.id); }}>
+                {busyId === a.id ? 'Signing…' : 'Review & sign'}
+              </Button>
             )}
+            <Button size="sm" variant="ghost" disabled={busyId === a.id} onClick={() => { void explain(a.id); }}>
+              {summary?.id === a.id ? 'Hide explanation' : 'Explain'}
+            </Button>
+            <Button size="sm" variant="ghost" disabled={busyId === a.id} onClick={() => { void download(a.id); }}>
+              Download PDF
+            </Button>
           </div>
         </Card>
       ))}
+
+      {summary && (
+        <Card className="space-y-3 p-5">
+          <h3 className="font-semibold text-ink">What this agreement says</h3>
+          <p className="text-sm text-ink">{summary.data.summary}</p>
+          {summary.data.keyTerms.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-ink">Key terms</h4>
+              <ul className="mt-1 list-disc pl-5 text-sm text-muted">
+                {summary.data.keyTerms.map((t) => <li key={t}>{t}</li>)}
+              </ul>
+            </div>
+          )}
+          {summary.data.yourObligations.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-ink">Your obligations</h4>
+              <ul className="mt-1 list-disc pl-5 text-sm text-muted">
+                {summary.data.yourObligations.map((t) => <li key={t}>{t}</li>)}
+              </ul>
+            </div>
+          )}
+          <p className="text-xs text-muted">{summary.data.disclaimer}</p>
+        </Card>
+      )}
+
+      {note && <p className="text-sm text-muted">{note}</p>}
     </div>
   );
 }

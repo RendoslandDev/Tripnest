@@ -128,6 +128,8 @@ export interface MessageResponseDto {
   senderId: string;
   content: string;
   type: number;
+  mediaUrl?: string | null;
+  mediaType?: string | null;
   createdAt: string;
   isRead: boolean;
   readAt?: string | null;
@@ -568,6 +570,8 @@ export function mapMessage(dto: MessageResponseDto, myUserId: string): ChatMessa
     fromMe: dto.senderId === myUserId,
     text: dto.content,
     time: timeAgo(dto.createdAt),
+    mediaUrl: dto.mediaUrl ? assetUrl(dto.mediaUrl) : undefined,
+    mediaType: dto.mediaType ?? undefined,
   };
 }
 

@@ -1,4 +1,4 @@
-import { apiGet, apiPatch } from './client';
+import { apiGetList, apiPatch } from './client';
 
 // Caretaker workspace: service requests raised against the caller's
 // assignments. GET /mine is role-aware server-side (caretaker sees requests
@@ -19,7 +19,7 @@ export interface ServiceRequestDto {
 }
 
 export function getMyServiceRequests(): Promise<ServiceRequestDto[]> {
-  return apiGet<ServiceRequestDto[]>('/api/caretakers/service-requests/mine');
+  return apiGetList<ServiceRequestDto>('/api/caretakers/service-requests/mine');
 }
 
 export function acceptServiceRequest(id: string): Promise<unknown> {

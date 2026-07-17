@@ -1,12 +1,12 @@
 import type { Booking } from '../types';
-import { apiGet, apiPost } from './client';
+import { apiGetList, apiPost } from './client';
 import { mapBooking, type BookingResponseDto } from './backend';
 import { getProperties } from './properties';
 
 export async function getBookings(): Promise<Booking[]> {
   // Booking DTOs carry only propertyId — join against listings for titles.
   const [dtos, properties] = await Promise.all([
-    apiGet<BookingResponseDto[]>('/api/bookings/user/my-bookings'),
+    apiGetList<BookingResponseDto>('/api/bookings/user/my-bookings'),
     getProperties().catch(() => []),
   ]);
   const byId = new Map(properties.map((p) => [p.id, p]));
