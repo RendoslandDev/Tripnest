@@ -109,6 +109,24 @@ export async function signInWithGoogle(idToken: string): Promise<Session> {
   return next;
 }
 
+/** Server-side X code exchange (confidential client — the secret lives on the backend). */
+export async function exchangeXCode(code: string, codeVerifier: string, redirectUri: string): Promise<string> {
+  const data = await apiPost<{ accessToken: string }>('/api/auth/x/exchange', { code, codeVerifier, redirectUri });
+  return data.accessToken;
+}
+
+/**
+ * Sign in with an X access token. Keyed on the X account id server-side; `email` is only needed
+ * on FIRST sign-in when X shares no confirmed email (the backend's 400 says so) — retry with it.
+ */
+export async function signInWithX(accessToken: string, email?: string): Promise<Session> {
+  const data = await apiPost<LoginData>('/api/auth/x', { accessToken, email });
+  setTokens(data.accessToken, data.refreshToken);
+  const next = toSession(data);
+  setSession(next);
+  return next;
+}
+
 export interface RegisterInput {
   fullName: string;
   email: string;

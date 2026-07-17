@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { signInWithGoogle, type Session } from '../store/authStore';
+import { startXSignIn, xSignInEnabled } from '../lib/xOauth';
 
 const GOOGLE_CLIENT_ID = (import.meta.env as Record<string, string | undefined>).VITE_GOOGLE_CLIENT_ID;
 
@@ -17,9 +18,9 @@ declare global {
 }
 
 /**
- * Social sign-in options. Google is fully wired and lights up the moment VITE_GOOGLE_CLIENT_ID
- * (and the matching backend GoogleAuth:ClientId) are set; Apple/Facebook are placeholders until
- * their providers are configured.
+ * Social sign-in options. Google lights up the moment VITE_GOOGLE_CLIENT_ID (and the matching
+ * backend GoogleAuth:ClientId) are set. X lights up with VITE_X_CLIENT_ID — it redirects through
+ * X's OAuth page and returns via /auth/x/callback. Apple stays deferred until the iOS app.
  */
 export default function SocialSignIn({ onSignedIn }: { onSignedIn: (s: Session) => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -56,7 +57,7 @@ export default function SocialSignIn({ onSignedIn }: { onSignedIn: (s: Session) 
   }, [onSignedIn]);
 
   // Nothing to show until a provider is configured — keep the auth screen clean.
-  if (!GOOGLE_CLIENT_ID) return null;
+  if (!GOOGLE_CLIENT_ID && !xSignInEnabled()) return null;
 
   return (
     <div className="space-y-2">
@@ -66,6 +67,19 @@ export default function SocialSignIn({ onSignedIn }: { onSignedIn: (s: Session) 
         <span className="h-px flex-1 bg-gray-200" />
       </div>
       <div ref={ref} className="flex justify-center" />
+      {xSignInEnabled() && (
+        <button
+          type="button"
+          onClick={() => { void startXSignIn(); }}
+          className="mx-auto flex w-80 max-w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"
+        >
+          {/* X logomark */}
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          </svg>
+          Continue with X
+        </button>
+      )}
     </div>
   );
 }
