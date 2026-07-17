@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { homeForRole } from '../lib/roleHome';
-import { consumeXCallback, xRedirectUri } from '../lib/xOauth';
-import { exchangeXCode, signInWithX } from '../store/authStore';
+import { consumeXCallback, consumeXSignupRole, xRedirectUri } from '../lib/xOauth';
+import { exchangeXCode, signInWithX, type Role } from '../store/authStore';
 
 /**
  * Lands here from X after the user authorizes (/auth/x/callback). Exchanges the one-time code
@@ -19,13 +19,14 @@ export default function XCallbackPage() {
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(true);
   const tokenRef = useRef<string | null>(null);
+  const roleRef = useRef<Role | undefined>(undefined);
   const ran = useRef(false);
 
   const finish = async (suppliedEmail?: string) => {
     setBusy(true);
     setError(null);
     try {
-      const session = await signInWithX(tokenRef.current!, suppliedEmail);
+      const session = await signInWithX(tokenRef.current!, suppliedEmail, roleRef.current);
       navigate(homeForRole(session.role), { replace: true });
     } catch (e) {
       if (e instanceof ApiError && /email/i.test(e.message) && !suppliedEmail) {
@@ -41,6 +42,7 @@ export default function XCallbackPage() {
     if (ran.current) return; // StrictMode double-invoke guard: the code is single-use
     ran.current = true;
 
+    roleRef.current = consumeXSignupRole() as Role | undefined;
     const callback = consumeXCallback(query);
     if (!callback) {
       setError(query.get('error') === 'access_denied'

@@ -100,9 +100,10 @@ export const requestPasswordReset = (email: string) =>
 export const resetPassword = (email: string, resetToken: string, newPassword: string) =>
   apiPost('/api/auth/reset-password', { email, resetToken, newPassword, confirmPassword: newPassword });
 
-/** Sign in with a Google ID token (from Google Identity Services). Provisions on first use. */
-export async function signInWithGoogle(idToken: string): Promise<Session> {
-  const data = await apiPost<LoginData>('/api/auth/google', { idToken });
+/** Sign in with a Google ID token (from Google Identity Services). Provisions on first use;
+ * `role` applies only to that first sign-up (the backend never changes an existing role). */
+export async function signInWithGoogle(idToken: string, role?: Role): Promise<Session> {
+  const data = await apiPost<LoginData>('/api/auth/google', { idToken, role: role ? roleToInt(role) : undefined });
   setTokens(data.accessToken, data.refreshToken);
   const next = toSession(data);
   setSession(next);
@@ -119,8 +120,8 @@ export async function exchangeXCode(code: string, codeVerifier: string, redirect
  * Sign in with an X access token. Keyed on the X account id server-side; `email` is only needed
  * on FIRST sign-in when X shares no confirmed email (the backend's 400 says so) — retry with it.
  */
-export async function signInWithX(accessToken: string, email?: string): Promise<Session> {
-  const data = await apiPost<LoginData>('/api/auth/x', { accessToken, email });
+export async function signInWithX(accessToken: string, email?: string, role?: Role): Promise<Session> {
+  const data = await apiPost<LoginData>('/api/auth/x', { accessToken, email, role: role ? roleToInt(role) : undefined });
   setTokens(data.accessToken, data.refreshToken);
   const next = toSession(data);
   setSession(next);

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { signInWithGoogle, type Session } from '../store/authStore';
+import { signInWithGoogle, type Role, type Session } from '../store/authStore';
 import { startXSignIn, xSignInEnabled } from '../lib/xOauth';
 
 const GOOGLE_CLIENT_ID = (import.meta.env as Record<string, string | undefined>).VITE_GOOGLE_CLIENT_ID;
@@ -22,8 +22,11 @@ declare global {
  * backend GoogleAuth:ClientId) are set. X lights up with VITE_X_CLIENT_ID — it redirects through
  * X's OAuth page and returns via /auth/x/callback. Apple stays deferred until the iOS app.
  */
-export default function SocialSignIn({ onSignedIn }: { onSignedIn: (s: Session) => void }) {
+export default function SocialSignIn({ onSignedIn, signupRole }: { onSignedIn: (s: Session) => void; signupRole?: Role }) {
   const ref = useRef<HTMLDivElement>(null);
+  // The GIS callback closure outlives renders — a ref keeps the CURRENT tab's role choice visible to it.
+  const signupRoleRef = useRef<Role | undefined>(signupRole);
+  signupRoleRef.current = signupRole;
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) return;
@@ -35,7 +38,7 @@ export default function SocialSignIn({ onSignedIn }: { onSignedIn: (s: Session) 
         client_id: GOOGLE_CLIENT_ID,
         callback: async (resp) => {
           try {
-            const session = await signInWithGoogle(resp.credential);
+            const session = await signInWithGoogle(resp.credential, signupRoleRef.current);
             onSignedIn(session);
           } catch { /* surfaced by the caller's error handling if needed */ }
         },
@@ -70,7 +73,7 @@ export default function SocialSignIn({ onSignedIn }: { onSignedIn: (s: Session) 
       {xSignInEnabled() && (
         <button
           type="button"
-          onClick={() => { void startXSignIn(); }}
+          onClick={() => { void startXSignIn(signupRoleRef.current); }}
           className="mx-auto flex w-80 max-w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"
         >
           {/* X logomark */}

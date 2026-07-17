@@ -299,7 +299,7 @@ export default function WelcomePage() {
           </form>
 
           <div className="mt-4">
-            <SocialSignIn onSignedIn={(s) => navigate(homeForRole(s.role), { replace: true })} />
+            <SocialSignIn signupRole={mode === 'signup' ? role : undefined} onSignedIn={(s) => navigate(homeForRole(s.role), { replace: true })} />
           </div>
           </>
           )}

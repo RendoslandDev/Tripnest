@@ -9,6 +9,7 @@ const X_CLIENT_ID = (import.meta.env as Record<string, string | undefined>).VITE
 
 const VERIFIER_KEY = 'tripnest.x.verifier';
 const STATE_KEY = 'tripnest.x.state';
+const ROLE_KEY = 'tripnest.x.role';
 
 /** True when sign-in with X is configured for this build. */
 export const xSignInEnabled = (): boolean => Boolean(X_CLIENT_ID);
@@ -27,9 +28,15 @@ async function sha256Challenge(verifier: string): Promise<string> {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-/** Kicks off the flow: stores the PKCE verifier + anti-CSRF state, then redirects to X. */
-export async function startXSignIn(): Promise<void> {
+/**
+ * Kicks off the flow: stores the PKCE verifier + anti-CSRF state (and the role picked on the
+ * sign-up tab, which must survive the round-trip to x.com), then redirects to X.
+ */
+export async function startXSignIn(role?: string): Promise<void> {
   if (!X_CLIENT_ID) return;
+
+  if (role) sessionStorage.setItem(ROLE_KEY, role);
+  else sessionStorage.removeItem(ROLE_KEY);
 
   const verifier = randomUrlSafe(48);
   const state = randomUrlSafe(24);
@@ -65,4 +72,11 @@ export function consumeXCallback(query: URLSearchParams): { code: string; verifi
 
   if (!code || !verifier || !state || state !== expectedState) return null;
   return { code, verifier };
+}
+
+/** The role picked before the redirect (sign-up tab only); consumed once by the callback page. */
+export function consumeXSignupRole(): string | undefined {
+  const role = sessionStorage.getItem(ROLE_KEY) ?? undefined;
+  sessionStorage.removeItem(ROLE_KEY);
+  return role;
 }
