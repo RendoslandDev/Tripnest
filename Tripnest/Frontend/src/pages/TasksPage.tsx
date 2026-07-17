@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { HostTask, TaskPriority, TaskStatus } from '../types';
 import { getHostTasks, setHostTaskStatus } from '../api/hostTasks';
+import MaintenanceSection from '../components/landlord/MaintenanceSection';
 import { useAsync } from '../hooks/useAsync';
 import AsyncBoundary from '../components/AsyncBoundary';
 import Card from '../components/ui/Card';
@@ -83,6 +84,8 @@ export default function TasksPage() {
       >
         {(rows) => <TaskList initial={rows} filter={filter} />}
       </AsyncBoundary>
+
+      <MaintenanceSection />
     </div>
   );
 }

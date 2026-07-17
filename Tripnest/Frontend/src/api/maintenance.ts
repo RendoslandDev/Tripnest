@@ -1,5 +1,5 @@
 import type { MaintenanceTicket } from '../types';
-import { apiGetList, apiPost } from './client';
+import { apiGetList, apiPatch, apiPost } from './client';
 import { mapMaintenance, type BookingResponseDto, type MaintenanceResponseDto } from './backend';
 import { getPropertyById } from './properties';
 
@@ -26,4 +26,23 @@ export async function createMaintenanceTicket(
     priority: 'Medium',
   });
   return mapMaintenance(dto, await getPropertyById(dto.propertyId));
+}
+
+// ---- Landlord/caretaker processing ----------------------------------------------------------
+
+export const MAINTENANCE_STATUSES = ['Reported', 'Assigned', 'InProgress', 'Completed', 'Cancelled'] as const;
+export type MaintenanceStatusName = (typeof MAINTENANCE_STATUSES)[number];
+
+/** All requests on one property (landlord or assigned caretaker only). */
+export function getPropertyMaintenance(propertyId: string): Promise<MaintenanceResponseDto[]> {
+  return apiGetList<MaintenanceResponseDto>(`/api/maintenance/property/${propertyId}`);
+}
+
+export function updateMaintenanceStatus(id: string, status: MaintenanceStatusName): Promise<unknown> {
+  return apiPatch(`/api/maintenance/${id}/status`, { status });
+}
+
+/** Hands the issue to a caretaker as a service request (optionally a specific one). */
+export function convertToServiceRequest(id: string, caretakerId?: string): Promise<unknown> {
+  return apiPost(`/api/maintenance/${id}/convert-to-service-request`, { caretakerId });
 }

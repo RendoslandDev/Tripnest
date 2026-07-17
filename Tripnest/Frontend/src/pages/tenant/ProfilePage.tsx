@@ -4,6 +4,8 @@ import { getMyProfile, updateMyProfile, uploadProfilePhoto } from '../../api/pro
 import { cacheProfilePhoto, getCachedProfilePhoto } from '../../lib/profilePhoto';
 import { ApiError, assetUrl } from '../../api/client';
 import Card from '../../components/ui/Card';
+import SignatureCard from '../../components/profile/SignatureCard';
+import StudentCard from '../../components/profile/StudentCard';
 import Button from '../../components/ui/Button';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
@@ -264,6 +266,9 @@ export default function ProfilePage() {
                 )}
               </div>
             </Card>
+
+            <SignatureCard />
+            <StudentCard />
 
             <section>
               <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-ink">

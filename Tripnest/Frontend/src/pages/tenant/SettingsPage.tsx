@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
+import SafetySection from '../../components/settings/SafetySection';
 import Button from '../../components/ui/Button';
 import Toggle from '../../components/ui/Toggle';
 import {
@@ -203,6 +204,8 @@ export default function SettingsPage() {
           )}
         </div>
       </Card>
+
+      <SafetySection />
 
       <Card className="overflow-hidden border-rose-200">
         <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-5">
