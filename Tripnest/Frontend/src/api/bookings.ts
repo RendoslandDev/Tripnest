@@ -34,3 +34,31 @@ export async function createBooking(input: {
 export function cancelBooking(bookingId: string): Promise<unknown> {
   return apiPost(`/api/bookings/${bookingId}/cancel`);
 }
+
+// ---- Split billing (group bookings) ---------------------------------------------------------
+
+export const SHARE_STATUS = ['Pending', 'Paid', 'Refunded'] as const;
+
+export interface BookingShareDto {
+  shareId: string;
+  bookingId: string;
+  participantUserId: string;
+  participantName?: string | null;
+  amount: number;
+  status: number; // index into SHARE_STATUS
+  paidAt?: string | null;
+  /** Set only on the pay response — this participant's checkout link. */
+  checkoutUrl?: string | null;
+}
+
+export function getBookingShares(bookingId: string): Promise<BookingShareDto[]> {
+  return apiGetList<BookingShareDto>(`/api/bookings/${bookingId}/shares`);
+}
+
+export function payShare(shareId: string): Promise<BookingShareDto> {
+  return apiPost<BookingShareDto>(`/api/bookings/shares/${shareId}/pay`);
+}
+
+export function verifyShare(shareId: string): Promise<BookingShareDto> {
+  return apiPost<BookingShareDto>(`/api/bookings/shares/${shareId}/verify`);
+}

@@ -1,5 +1,5 @@
 import type { CalendarBooking, CalendarMonth, Listing } from '../types';
-import { apiGetList } from './client';
+import { apiDelete, apiGet, apiGetList, apiPost } from './client';
 import type { BlockedDateDto } from './backend';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -122,4 +122,39 @@ export async function getCalendarMonth(
     prices,
     bookings,
   };
+}
+
+// ---- iCal sync (export our calendar; import other platforms') -------------------------------
+
+/** The public tokenized .ics URL for this property — paste into Airbnb/Booking/Google Calendar. */
+export async function getIcalFeedUrl(propertyId: string): Promise<string> {
+  const data = await apiGet<{ feedUrl: string }>(`/api/calendar/${propertyId}/feed-url`);
+  return data.feedUrl;
+}
+
+export interface ExternalCalendarDto {
+  id: string;
+  propertyId: string;
+  name: string;
+  feedUrl: string;
+  lastSyncedAt?: string | null;
+  lastSyncError?: string | null;
+  importedRanges: number;
+}
+
+export function getExternalCalendars(propertyId: string): Promise<ExternalCalendarDto[]> {
+  return apiGetList<ExternalCalendarDto>(`/api/calendar/${propertyId}/external`);
+}
+
+export function addExternalCalendar(propertyId: string, name: string, feedUrl: string): Promise<ExternalCalendarDto> {
+  return apiPost<ExternalCalendarDto>(`/api/calendar/${propertyId}/external`, { name, feedUrl });
+}
+
+/** Pull the feed now (a background worker also refreshes on a schedule). */
+export function syncExternalCalendar(id: string): Promise<ExternalCalendarDto> {
+  return apiPost<ExternalCalendarDto>(`/api/calendar/external/${id}/sync`);
+}
+
+export function removeExternalCalendar(id: string): Promise<unknown> {
+  return apiDelete(`/api/calendar/external/${id}`);
 }

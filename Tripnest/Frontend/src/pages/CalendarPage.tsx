@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import CalendarSyncSection from '../components/landlord/CalendarSyncSection';
 import type { CalendarMonth, Listing } from '../types';
 import { getCalendarMonth } from '../api/calendar';
 import { getListings } from '../api/listings';
@@ -265,6 +266,8 @@ export default function CalendarPage() {
           )
         }
       </AsyncBoundary>
+
+      <CalendarSyncSection />
     </div>
   );
 }

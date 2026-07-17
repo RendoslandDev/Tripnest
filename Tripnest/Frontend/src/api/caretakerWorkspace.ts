@@ -1,4 +1,4 @@
-import { apiGetList, apiPatch } from './client';
+import { apiGet, apiGetList, apiPatch } from './client';
 
 // Caretaker workspace: service requests raised against the caller's
 // assignments. GET /mine is role-aware server-side (caretaker sees requests
@@ -31,4 +31,25 @@ export type ServiceRequestStatus = 'InProgress' | 'Completed' | 'Cancelled';
 
 export function updateServiceRequestStatus(id: string, status: ServiceRequestStatus): Promise<unknown> {
   return apiPatch(`/api/caretakers/service-requests/${id}/status`, { status });
+}
+
+// ---- Self-service (the caretaker's own profile) ---------------------------------------------
+
+export interface CaretakerProfileDto {
+  caretakerId: string;
+  userId: string;
+  status: number; // 0 Active, 1 Inactive, 2 Suspended
+  monthlyCompensation?: number | null;
+  responsibilities: string;
+  bio?: string | null;
+  serviceArea?: string | null;
+}
+
+export function getMyCaretakerProfile(): Promise<CaretakerProfileDto> {
+  return apiGet<CaretakerProfileDto>('/api/caretakers/me');
+}
+
+/** Flip availability: Active (0) takes new work, Inactive (1) pauses new requests. */
+export function setMyAvailability(active: boolean): Promise<unknown> {
+  return apiPatch('/api/caretakers/me/availability', { status: active ? 0 : 1 });
 }
