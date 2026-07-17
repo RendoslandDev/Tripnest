@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import ClaimsSection from '../../components/landlord/ClaimsSection';
 import type { LandlordBooking, LandlordBookingStatus } from '../../types';
 import { declineLandlordBooking, getLandlordBookings } from '../../api/landlord';
 import { useAsync } from '../../hooks/useAsync';
@@ -100,8 +101,12 @@ function BookingsView({ initial }: { initial: LandlordBooking[] }) {
 export default function LandlordBookingsPage() {
   const state = useAsync(getLandlordBookings, []);
   return (
-    <AsyncBoundary state={state} loadingMessage="Loading bookings…" errorMessage="Failed to load bookings." emptyMessage="No bookings yet." isEmpty={(r) => r.length === 0}>
-      {(rows) => <BookingsView initial={rows} />}
-    </AsyncBoundary>
+    <div>
+      <AsyncBoundary state={state} loadingMessage="Loading bookings…" errorMessage="Failed to load bookings." emptyMessage="No bookings yet." isEmpty={(r) => r.length === 0}>
+        {(rows) => <BookingsView initial={rows} />}
+      </AsyncBoundary>
+
+      <ClaimsSection />
+    </div>
   );
 }
