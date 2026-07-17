@@ -1,5 +1,5 @@
 import type { TenantDashboard } from '../types';
-import { apiGet } from './client';
+import { apiGet, apiGetList } from './client';
 import { formatIsoDate, mapBookingStatus, type TenantDashboardDto, type WishlistItemDto } from './backend';
 import { getMaintenanceTickets } from './maintenance';
 import { getConversations } from './messages';
@@ -13,7 +13,7 @@ import { getPropertyById } from './properties';
 export async function getTenantDashboard(): Promise<TenantDashboard> {
   const [dash, wishlist, tickets, conversations] = await Promise.all([
     apiGet<TenantDashboardDto>('/api/personaldashboard/tenant'),
-    apiGet<WishlistItemDto[]>('/api/wishlist/mine').catch(() => []),
+    apiGetList<WishlistItemDto>('/api/wishlist/mine').catch(() => []),
     getMaintenanceTickets().catch(() => []),
     getConversations().catch(() => []),
   ]);

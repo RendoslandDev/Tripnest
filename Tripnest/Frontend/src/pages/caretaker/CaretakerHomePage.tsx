@@ -4,6 +4,7 @@ import { getMyServiceRequests, type ServiceRequestDto } from '../../api/caretake
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import StatCard from '../../components/workspace/StatCard';
+import AvailabilityCard from '../../components/caretaker/AvailabilityCard';
 import Card from '../../components/ui/Card';
 import Badge, { type BadgeTone } from '../../components/ui/Badge';
 import { formatCedi } from '../../lib/format';
@@ -53,6 +54,8 @@ function Overview({ data }: { data: OverviewData }) {
         <h1 className="text-3xl font-bold tracking-tight text-ink">Welcome back, {firstName}</h1>
         <p className="mt-1 text-muted">Here's the work on your plate.</p>
       </div>
+
+      <AvailabilityCard />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard

@@ -1,9 +1,9 @@
 import type { Property } from '../types';
-import { apiDelete, apiGet, apiPost } from './client';
+import { apiDelete, apiGet, apiGetList, apiPost } from './client';
 import { mapProperty, type PropertyResponseDto, type WishlistItemDto } from './backend';
 
 export async function getProperties(): Promise<Property[]> {
-  const dtos = await apiGet<PropertyResponseDto[]>('/api/properties');
+  const dtos = await apiGetList<PropertyResponseDto>('/api/properties');
   return dtos.map(mapProperty);
 }
 
@@ -22,7 +22,7 @@ export async function getPropertyById(id: string): Promise<Property | undefined>
 }
 
 export async function searchProperties(location: string): Promise<Property[]> {
-  const dtos = await apiGet<PropertyResponseDto[]>(
+  const dtos = await apiGetList<PropertyResponseDto>(
     `/api/properties/search?location=${encodeURIComponent(location)}`,
   );
   return dtos.map(mapProperty);
@@ -31,7 +31,7 @@ export async function searchProperties(location: string): Promise<Property[]> {
 /** Wishlist-backed "Saved" list: ids from /api/wishlist joined to listings. */
 export async function getSavedProperties(): Promise<Property[]> {
   const [items, all] = await Promise.all([
-    apiGet<WishlistItemDto[]>('/api/wishlist/mine'),
+    apiGetList<WishlistItemDto>('/api/wishlist/mine'),
     getProperties(),
   ]);
   const saved = new Set(items.map((i) => i.propertyId));

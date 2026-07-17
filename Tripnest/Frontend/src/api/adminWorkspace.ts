@@ -1,11 +1,11 @@
-import { apiGet, apiPatch, apiPost } from './client';
+import { apiGetList, apiPatch, apiPost } from './client';
 import type { EscrowResponseDto } from './escrow';
 
 // Admin workspace: dispute queue, assistant-escalation support tickets and
 // the audit trail. All Admin-role-only server-side.
 
 export function getDisputedEscrows(): Promise<EscrowResponseDto[]> {
-  return apiGet<EscrowResponseDto[]>('/api/escrow/disputes');
+  return apiGetList<EscrowResponseDto>('/api/escrow/disputes');
 }
 
 /** approved=true releases the funds to the landlord; false refunds the tenant. */
@@ -33,7 +33,7 @@ export interface SupportTicketDto {
 }
 
 export function getSupportTickets(): Promise<SupportTicketDto[]> {
-  return apiGet<SupportTicketDto[]>('/api/admin/support-tickets');
+  return apiGetList<SupportTicketDto>('/api/admin/support-tickets');
 }
 
 export function resolveSupportTicket(ticketId: string): Promise<unknown> {
@@ -53,5 +53,5 @@ export interface AuditLogDto {
 }
 
 export function getAuditLogs(limit = 100): Promise<AuditLogDto[]> {
-  return apiGet<AuditLogDto[]>(`/api/admin/audit-logs?limit=${limit}`);
+  return apiGetList<AuditLogDto>(`/api/admin/audit-logs?limit=${limit}`);
 }

@@ -1,4 +1,4 @@
-import { apiGet, apiPost, ApiError } from './client';
+import { ApiError, apiGetList, apiPost } from './client';
 import {
   timeAgo,
   type AssistantHistoryItemDto,
@@ -32,7 +32,7 @@ export async function askAssistant(question: string): Promise<AssistantReply> {
 
 /** The caller's conversation with the assistant, oldest first. */
 export async function getAssistantHistory(limit = 50): Promise<AssistantMessage[]> {
-  const dtos = await apiGet<AssistantHistoryItemDto[]>(`/api/assistant/history?limit=${limit}`);
+  const dtos = await apiGetList<AssistantHistoryItemDto>(`/api/assistant/history?limit=${limit}`);
   return dtos.map((dto) => ({
     id: dto.id,
     fromMe: dto.isFromUser,

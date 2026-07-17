@@ -1,12 +1,12 @@
 import type { Booking } from '../types';
-import { apiGet, apiPost } from './client';
+import { apiGetList, apiPost } from './client';
 import { mapBooking, type BookingResponseDto } from './backend';
 import { getProperties } from './properties';
 
 export async function getBookings(): Promise<Booking[]> {
   // Booking DTOs carry only propertyId — join against listings for titles.
   const [dtos, properties] = await Promise.all([
-    apiGet<BookingResponseDto[]>('/api/bookings/user/my-bookings'),
+    apiGetList<BookingResponseDto>('/api/bookings/user/my-bookings'),
     getProperties().catch(() => []),
   ]);
   const byId = new Map(properties.map((p) => [p.id, p]));
@@ -33,4 +33,32 @@ export async function createBooking(input: {
 
 export function cancelBooking(bookingId: string): Promise<unknown> {
   return apiPost(`/api/bookings/${bookingId}/cancel`);
+}
+
+// ---- Split billing (group bookings) ---------------------------------------------------------
+
+export const SHARE_STATUS = ['Pending', 'Paid', 'Refunded'] as const;
+
+export interface BookingShareDto {
+  shareId: string;
+  bookingId: string;
+  participantUserId: string;
+  participantName?: string | null;
+  amount: number;
+  status: number; // index into SHARE_STATUS
+  paidAt?: string | null;
+  /** Set only on the pay response — this participant's checkout link. */
+  checkoutUrl?: string | null;
+}
+
+export function getBookingShares(bookingId: string): Promise<BookingShareDto[]> {
+  return apiGetList<BookingShareDto>(`/api/bookings/${bookingId}/shares`);
+}
+
+export function payShare(shareId: string): Promise<BookingShareDto> {
+  return apiPost<BookingShareDto>(`/api/bookings/shares/${shareId}/pay`);
+}
+
+export function verifyShare(shareId: string): Promise<BookingShareDto> {
+  return apiPost<BookingShareDto>(`/api/bookings/shares/${shareId}/verify`);
 }

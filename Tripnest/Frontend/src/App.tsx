@@ -30,6 +30,7 @@ import SavedPage from './pages/tenant/SavedPage';
 import PropertyDetailPage from './pages/tenant/PropertyDetailPage';
 import CheckoutPage from './pages/tenant/CheckoutPage';
 import PaymentCallbackPage from './pages/tenant/PaymentCallbackPage';
+import XCallbackPage from './pages/XCallbackPage';
 import BookingsPage from './pages/tenant/BookingsPage';
 import AgreementsPage from './pages/tenant/AgreementsPage';
 import PaymentsPage from './pages/tenant/PaymentsPage';
@@ -121,6 +122,8 @@ export default function App() {
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/get-verified" element={<RequireAuth><GetVerifiedPage /></RequireAuth>} />
+        {/* X OAuth redirect target — public: the user is not signed in yet when X sends them back. */}
+        <Route path="/auth/x/callback" element={<XCallbackPage />} />
 
         {/* Tenant marketplace — browsing is public; personal pages need a login */}
         <Route path="/" element={<MarketplaceLayout />}>

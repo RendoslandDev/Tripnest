@@ -7,6 +7,7 @@ import AsyncBoundary from '../../components/AsyncBoundary';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
+import TrustScoreBadge from '../../components/tenant/TrustScoreBadge';
 import Avatar from '../../components/ui/Avatar';
 import BookingWidget from '../../components/tenant/BookingWidget';
 import { AmenityIcon, ShieldIcon, StarIcon, MapPinIcon } from '../../components/tenant/icons';
@@ -57,6 +58,7 @@ function Detail({ property }: { property: Property }) {
           <div>
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-bold text-ink">{property.title}</h1>
+              <TrustScoreBadge propertyId={property.id} />
               {property.verified && (
                 <Badge tone="green">
                   <span className="inline-flex items-center gap-1">

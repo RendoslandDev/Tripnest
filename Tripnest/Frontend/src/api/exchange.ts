@@ -1,5 +1,5 @@
 import type { ExchangeCategory, ExchangePost, ExchangeReply } from '../types';
-import { apiGet, apiPost } from './client';
+import { apiGet, apiGetList, apiPost } from './client';
 import {
   mapExchangePost,
   mapExchangeReply,
@@ -32,7 +32,7 @@ export async function createExchangePost(
 }
 
 export async function getExchangeReplies(postId: string): Promise<ExchangeReply[]> {
-  const dtos = await apiGet<ExchangeReplyResponseDto[]>(`/api/exchange/posts/${postId}/replies`);
+  const dtos = await apiGetList<ExchangeReplyResponseDto>(`/api/exchange/posts/${postId}/replies`);
   return dtos.map(mapExchangeReply);
 }
 

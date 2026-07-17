@@ -1,6 +1,6 @@
 import type { ChatMessage, Conversation } from '../types';
 import { getSession } from '../store/authStore';
-import { apiGet, apiPatch, apiPost } from './client';
+import { apiGet, apiGetList, apiPatch, apiPost, apiUpload } from './client';
 import {
   mapConversation,
   mapMessage,
@@ -24,7 +24,7 @@ import { getContact } from '../lib/chatContacts';
  */
 export async function getConversations(): Promise<Conversation[]> {
   const me = getSession()?.userId ?? '';
-  const dtos = await apiGet<ConversationResponseDto[]>('/api/chat/conversations/mine');
+  const dtos = await apiGetList<ConversationResponseDto>('/api/chat/conversations/mine');
   // Only direct (non-property) chats need the agents/caretakers directory.
   const directory = dtos.some((d) => !d.propertyId) ? await getProviderDirectory() : {};
   return Promise.all(dtos.map(async (dto) => {
@@ -77,6 +77,26 @@ export async function sendMessage(conversationId: string | number, body: string)
   const dto = await apiPost<MessageResponseDto>(
     `/api/chat/conversations/${conversationId}/messages`,
     { body },
+  );
+  return mapMessage(dto, me);
+}
+
+/**
+ * Send an attachment — an image, a voice note or a document (≤25 MB, validated server-side).
+ * The backend infers the message type from the file and broadcasts it over SignalR like text.
+ */
+export async function sendAttachment(
+  conversationId: string | number,
+  file: File,
+  caption?: string,
+): Promise<ChatMessage> {
+  const me = getSession()?.userId ?? '';
+  const form = new FormData();
+  form.append('file', file);
+  if (caption) form.append('caption', caption);
+  const dto = await apiUpload<MessageResponseDto>(
+    `/api/chat/conversations/${conversationId}/messages/attachment`,
+    form,
   );
   return mapMessage(dto, me);
 }

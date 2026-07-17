@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Trip, TripStatus } from '../types';
-import { getTrips } from '../api/trips';
+import { cancelTrip, getCancellationPreview, getTrips } from '../api/trips';
+import { submitReview } from '../api/reviews';
 import { useAsync } from '../hooks/useAsync';
 import AsyncBoundary from '../components/AsyncBoundary';
 import Card from '../components/ui/Card';
@@ -20,8 +21,74 @@ const TABS: { id: TripStatus; label: string }[] = [
   { id: 'canceled', label: 'Canceled' },
 ];
 
+/** Star picker for the review form (1–5, filled up to the current choice). */
+function Stars({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  return (
+    <div className="flex gap-1" role="radiogroup" aria-label="Rating">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          role="radio"
+          aria-checked={value === n}
+          aria-label={`${n} star${n > 1 ? 's' : ''}`}
+          onClick={() => onChange(n)}
+          className={`text-2xl leading-none ${n <= value ? 'text-amber-400' : 'text-gray-300'}`}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function TripCard({ trip }: { trip: Trip }) {
   const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState(trip.status);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [reviewed, setReviewed] = useState(false);
+
+  const cancel = async () => {
+    setBusy(true);
+    setNote(null);
+    try {
+      // Show the money consequence BEFORE asking for confirmation — the backend computes the
+      // exact refund from the property's cancellation policy, no client-side guessing.
+      const p = await getCancellationPreview(trip.id);
+      const ok = window.confirm(
+        `Cancel this trip?\n\nPolicy: ${p.policyName}\nRefund: GH₵ ${p.refundAmount.toLocaleString('en-GH')} (${p.refundPercentage}% — ${Math.floor(p.daysUntilCheckIn)} days before check-in)`,
+      );
+      if (ok) {
+        await cancelTrip(trip.id);
+        setStatus('canceled');
+        setNote('Trip cancelled. Any refund follows the policy shown.');
+      }
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : 'Could not cancel this trip.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendReview = async () => {
+    setBusy(true);
+    setNote(null);
+    try {
+      await submitReview({ bookingId: trip.id, propertyId: trip.propertyId, rating, comment: comment.trim() || undefined });
+      setReviewed(true);
+      setReviewOpen(false);
+      setNote('Thanks — your review is in.');
+    } catch (e) {
+      setNote(e instanceof Error ? e.message : 'Could not submit the review.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <Card className="flex overflow-hidden">
       <div className="w-28 shrink-0" style={{ backgroundColor: trip.coverColor }} />
@@ -31,7 +98,7 @@ function TripCard({ trip }: { trip: Trip }) {
             <p className="truncate font-semibold text-ink">{trip.destination}</p>
             <p className="truncate text-sm text-muted">{trip.property}</p>
           </div>
-          <Badge tone={STATUS_TONE[trip.status]}>{trip.status}</Badge>
+          <Badge tone={STATUS_TONE[status]}>{status}</Badge>
         </div>
 
         <p className="mt-3 text-sm text-muted">
@@ -48,6 +115,41 @@ function TripCard({ trip }: { trip: Trip }) {
             <dd className="text-right font-medium text-ink">{formatCurrency(trip.price)}</dd>
           </dl>
         )}
+
+        {open && status === 'upcoming' && (
+          <div className="mt-3">
+            <Button variant="ghost" size="sm" disabled={busy} onClick={() => { void cancel(); }}>
+              {busy ? 'Checking refund…' : 'Cancel trip'}
+            </Button>
+          </div>
+        )}
+
+        {open && status === 'completed' && !reviewed && (
+          <div className="mt-3">
+            {reviewOpen ? (
+              <div className="space-y-2 rounded-lg bg-gray-50 p-3">
+                <Stars value={rating} onChange={setRating} />
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="How was your stay? (optional)"
+                  rows={3}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" disabled={busy} onClick={() => { void sendReview(); }}>
+                    {busy ? 'Sending…' : 'Submit review'}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setReviewOpen(false)}>Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <Button variant="ghost" size="sm" onClick={() => setReviewOpen(true)}>Leave a review</Button>
+            )}
+          </div>
+        )}
+
+        {note && <p className="mt-2 text-sm text-muted">{note}</p>}
 
         <div className="mt-4 flex items-center justify-between">
           <span className="font-semibold text-ink">{formatCurrency(trip.price)}</span>

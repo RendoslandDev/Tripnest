@@ -7,7 +7,7 @@ import {
   type InitiateResult,
   type MomoNetwork,
 } from '../store/paymentStore';
-import { apiDelete, apiDownload, apiGet, apiPatch, apiPost, mockResponse } from './client';
+import { apiDelete, apiDownload, apiGet, apiGetList, apiPatch, apiPost, mockResponse } from './client';
 import {
   formatIsoDate,
   mapPaymentMethod,
@@ -42,7 +42,7 @@ export function downloadReceipt(receiptId: string): Promise<void> {
 // Saved payment methods, backed by /api/payments/methods. These are display
 // preferences — Paystack's hosted page still collects the instrument per charge.
 export async function getPaymentMethods(): Promise<PaymentMethod[]> {
-  const dtos = await apiGet<PaymentMethodResponseDto[]>('/api/payments/methods');
+  const dtos = await apiGetList<PaymentMethodResponseDto>('/api/payments/methods');
   return dtos.map(mapPaymentMethod);
 }
 

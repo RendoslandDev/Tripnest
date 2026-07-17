@@ -1,5 +1,5 @@
 import type { CalendarBooking, CalendarMonth, Listing } from '../types';
-import { apiGet } from './client';
+import { apiDelete, apiGet, apiGetList, apiPost } from './client';
 import type { BlockedDateDto } from './backend';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -18,7 +18,7 @@ export function getAvailableRanges(
   fromISO: string,
   toISO: string,
 ): Promise<DateRangeDto[]> {
-  return apiGet<DateRangeDto[]>(
+  return apiGetList<DateRangeDto>(
     `/api/properties/${propertyId}/available-ranges?from=${fromISO}&to=${toISO}`,
   );
 }
@@ -54,7 +54,7 @@ export async function getCalendarMonth(
   const monthStart = iso(year, monthIndex, 1);
   const monthEnd = iso(year, monthIndex, daysInMonth);
   const [blocked, openRanges] = await Promise.all([
-    apiGet<BlockedDateDto[]>(
+    apiGetList<BlockedDateDto>(
       `/api/properties/${listing.id}/availability?startDate=${monthStart}&endDate=${monthEnd}`,
     ),
     getAvailableRanges(listing.id, monthStart, monthEnd),
@@ -122,4 +122,39 @@ export async function getCalendarMonth(
     prices,
     bookings,
   };
+}
+
+// ---- iCal sync (export our calendar; import other platforms') -------------------------------
+
+/** The public tokenized .ics URL for this property — paste into Airbnb/Booking/Google Calendar. */
+export async function getIcalFeedUrl(propertyId: string): Promise<string> {
+  const data = await apiGet<{ feedUrl: string }>(`/api/calendar/${propertyId}/feed-url`);
+  return data.feedUrl;
+}
+
+export interface ExternalCalendarDto {
+  id: string;
+  propertyId: string;
+  name: string;
+  feedUrl: string;
+  lastSyncedAt?: string | null;
+  lastSyncError?: string | null;
+  importedRanges: number;
+}
+
+export function getExternalCalendars(propertyId: string): Promise<ExternalCalendarDto[]> {
+  return apiGetList<ExternalCalendarDto>(`/api/calendar/${propertyId}/external`);
+}
+
+export function addExternalCalendar(propertyId: string, name: string, feedUrl: string): Promise<ExternalCalendarDto> {
+  return apiPost<ExternalCalendarDto>(`/api/calendar/${propertyId}/external`, { name, feedUrl });
+}
+
+/** Pull the feed now (a background worker also refreshes on a schedule). */
+export function syncExternalCalendar(id: string): Promise<ExternalCalendarDto> {
+  return apiPost<ExternalCalendarDto>(`/api/calendar/external/${id}/sync`);
+}
+
+export function removeExternalCalendar(id: string): Promise<unknown> {
+  return apiDelete(`/api/calendar/external/${id}`);
 }

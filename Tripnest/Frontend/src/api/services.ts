@@ -1,5 +1,5 @@
 import type { ServiceProvider } from '../types';
-import { apiGet, apiPost } from './client';
+import { apiGetList, apiPost } from './client';
 import { getProperties } from './properties';
 
 // ---------------------------------------------------------------------------
@@ -100,8 +100,8 @@ function mapCaretaker(dto: CaretakerDto, location?: string): ServiceProvider {
 /** userId → directory display name/role for live agents and caretakers. */
 export async function getProviderDirectory(): Promise<Record<string, { name: string; role: string }>> {
   const [agents, caretakers] = await Promise.all([
-    apiGet<AgentDto[]>('/api/agents').catch(() => [] as AgentDto[]),
-    apiGet<CaretakerDto[]>('/api/caretakers').catch(() => [] as CaretakerDto[]),
+    apiGetList<AgentDto>('/api/agents').catch(() => [] as AgentDto[]),
+    apiGetList<CaretakerDto>('/api/caretakers').catch(() => [] as CaretakerDto[]),
   ]);
   const map: Record<string, { name: string; role: string }> = {};
   for (const a of agents) map[a.userId] = { name: `Verified Agent · ${a.licenseNumber}`, role: 'Agent' };
@@ -112,7 +112,7 @@ export async function getProviderDirectory(): Promise<Record<string, { name: str
 /** propertyId → caretaker userId, for "chat about this property" flows. */
 export async function getCaretakersByProperty(): Promise<Record<string, string>> {
   try {
-    const dtos = await apiGet<CaretakerDto[]>('/api/caretakers');
+    const dtos = await apiGetList<CaretakerDto>('/api/caretakers');
     return Object.fromEntries(dtos.map((c) => [c.propertyId, c.userId]));
   } catch {
     return {};
@@ -122,13 +122,13 @@ export async function getCaretakersByProperty(): Promise<Record<string, string>>
 async function liveProviders(category: string): Promise<ServiceProvider[]> {
   try {
     if (category === 'Agents') {
-      const dtos = await apiGet<AgentDto[]>('/api/agents');
+      const dtos = await apiGetList<AgentDto>('/api/agents');
       return dtos.map(mapAgent);
     }
     if (category === 'Caretakers') {
       // A caretaker's location is their assigned property's location.
       const [dtos, properties] = await Promise.all([
-        apiGet<CaretakerDto[]>('/api/caretakers'),
+        apiGetList<CaretakerDto>('/api/caretakers'),
         getProperties().catch(() => []),
       ]);
       const locations = new Map(properties.map((p) => [p.id, p.location]));

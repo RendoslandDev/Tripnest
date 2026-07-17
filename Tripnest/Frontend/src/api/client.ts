@@ -142,6 +142,18 @@ async function request<T>(method: string, path: string, body?: unknown, retried 
   return envelope.data as T;
 }
 
+/**
+ * List endpoints migrated to server-side pagination return { items, totalCount, ... } instead of a
+ * bare array — a drift that silently broke every page typed as T[] (".map is not a function" →
+ * the page showed "failed"). apiGetList accepts EITHER shape, so callers keep working whether or
+ * not an endpoint is paginated yet.
+ */
+export function asItems<T>(data: T[] | Paged<T> | null | undefined): T[] {
+  if (!data) return [];
+  return Array.isArray(data) ? data : (data.items ?? []);
+}
+export const apiGetList = <T>(path: string) => request<T[] | Paged<T>>('GET', path).then(asItems);
+
 export const apiGet = <T>(path: string) => request<T>('GET', path);
 export const apiPost = <T>(path: string, body?: unknown) => request<T>('POST', path, body);
 export const apiPut = <T>(path: string, body?: unknown) => request<T>('PUT', path, body);

@@ -1,4 +1,4 @@
-import { apiGet, apiPatch, apiPut, ApiError } from './client';
+import { ApiError, apiGet, apiGetList, apiPatch, apiPut } from './client';
 
 // Agent workspace endpoints: viewing requests assigned to the caller and the
 // caller's public directory profile (404 until first saved via PUT).
@@ -15,7 +15,7 @@ export interface ViewingRequestDto {
 }
 
 export function getMyViewingRequests(): Promise<ViewingRequestDto[]> {
-  return apiGet<ViewingRequestDto[]>('/api/agents/viewing-requests/mine');
+  return apiGetList<ViewingRequestDto>('/api/agents/viewing-requests/mine');
 }
 
 /** The server Enum.TryParses this, so the PascalCase names are the contract. */
