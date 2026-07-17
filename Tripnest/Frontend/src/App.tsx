@@ -31,6 +31,7 @@ import PropertyDetailPage from './pages/tenant/PropertyDetailPage';
 import CheckoutPage from './pages/tenant/CheckoutPage';
 import PaymentCallbackPage from './pages/tenant/PaymentCallbackPage';
 import XCallbackPage from './pages/XCallbackPage';
+import RoommatesPage from './pages/tenant/RoommatesPage';
 import BookingsPage from './pages/tenant/BookingsPage';
 import AgreementsPage from './pages/tenant/AgreementsPage';
 import PaymentsPage from './pages/tenant/PaymentsPage';
@@ -80,6 +81,7 @@ function Landing() {
 const TENANT_PAGES: Record<string, ReactNode> = {
   '/': <Landing />,
   '/overview': <TenantDashboardPage />,
+  '/roommates': <RoommatesPage />,
   '/search': <SearchPage />,
   '/nearby': (
     <Suspense fallback={<p className="text-muted">Loading map…</p>}>
@@ -111,7 +113,7 @@ const TENANT_PAGES: Record<string, ReactNode> = {
 // search, nearby, property pages, service directories) is open to guests.
 const AUTH_ONLY_TENANT_PATHS = new Set([
   '/overview', '/saved', '/bookings', '/agreements', '/payments', '/messages',
-  '/notifications', '/maintenance', '/profile', '/settings',
+  '/notifications', '/maintenance', '/profile', '/settings', '/roommates',
 ]);
 
 export default function App() {

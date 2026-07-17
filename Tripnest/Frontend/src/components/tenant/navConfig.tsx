@@ -43,6 +43,7 @@ export const TENANT_NAV: TenantNavGroup[] = [
       { label: 'Caretakers', path: '/caretakers', icon: <UsersIcon /> },
       { label: 'House Help', path: '/house-help', icon: <SparkleIcon /> },
       { label: 'Maintenance', path: '/maintenance', icon: <ToolIcon /> },
+      { label: 'Roommates', path: '/roommates', icon: <UsersIcon /> },
       { label: 'Agents', path: '/agents', icon: <UserCheckIcon /> },
     ],
   },

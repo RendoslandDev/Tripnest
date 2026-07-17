@@ -23,3 +23,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local env overrides (billed/secret keys — never commit; .env holds only public client ids)
+.env.local
+.env.*.local

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ClaimsReviewSection from '../../components/admin/ClaimsReviewSection';
 import { getDisputedEscrows, resolveDispute, refundEscrow } from '../../api/adminWorkspace';
 import type { EscrowResponseDto } from '../../api/escrow';
 import { useAsync } from '../../hooks/useAsync';
@@ -26,6 +27,8 @@ export default function DisputesPage() {
       >
         {(rows) => <Queue initial={rows} />}
       </AsyncBoundary>
+
+      <ClaimsReviewSection />
     </div>
   );
 }

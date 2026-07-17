@@ -14,6 +14,7 @@ import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import Card from '../../components/ui/Card';
 import RentAndSharesSection from '../../components/tenant/RentAndSharesSection';
+import TenantClaimsSection from '../../components/tenant/TenantClaimsSection';
 import Button from '../../components/ui/Button';
 import Badge, { type BadgeTone } from '../../components/ui/Badge';
 import { formatCedi } from '../../lib/format';
@@ -506,6 +507,7 @@ export default function PaymentsPage() {
       </AsyncBoundary>
 
       <RentAndSharesSection />
+      <TenantClaimsSection />
     </div>
   );
 }
