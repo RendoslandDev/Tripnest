@@ -83,6 +83,12 @@
 .tn-lift { transition: transform .25s ease, box-shadow .25s ease; }
 .tn-lift:hover { transform: translateY(-4px); box-shadow: 0 14px 30px -14px rgba(8, 6, 13, .22); }
 
+/* Upload affordances (browse fields, avatar) glow under the pointer. */
+.tn-glow { transition: box-shadow .25s ease, border-color .25s ease; }
+.tn-glow:hover {
+  box-shadow: 0 0 0 3px rgba(15, 81, 50, .18), 0 0 20px 4px rgba(15, 81, 50, .35);
+}
+
 /* Slowly pans the hero's oversized gradient for a living background. */
 @keyframes tn-gradient-pan {
   0%   { background-position: 0% 50%; }
@@ -113,6 +119,7 @@
   .tn-reveal { opacity: 1; }
   .tn-reveal.tn-in, .tn-drift, .tn-drift--slow { animation: none; }
   .tn-lift, .tn-lift:hover { transform: none; transition: none; box-shadow: none; }
+  .tn-glow { transition: none; }
   .tn-gradient-pan, .tn-word { animation: none; }
   .tn-parallax { transform: none; transition: none; }
 }

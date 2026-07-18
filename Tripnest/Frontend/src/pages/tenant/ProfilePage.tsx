@@ -11,6 +11,7 @@ import Button from '../../components/ui/Button';
 import Avatar from '../../components/ui/Avatar';
 import Badge from '../../components/ui/Badge';
 import ContactVerification from '../../components/ContactVerification';
+import { useT } from '../../lib/i18n';
 import {
   ShieldIcon, CheckIcon, StarIcon, MapPinIcon, MailIcon, PhoneIcon, BadgeIcon,
 } from '../../components/tenant/icons';
@@ -52,6 +53,7 @@ function VerifiedChip({ label }: { label: string }) {
 
 export default function ProfilePage() {
   const session = useSession();
+  const t = useT();
   const roleLabel = session ? session.role[0].toUpperCase() + session.role.slice(1) : 'Guest';
 
   const [editing, setEditing] = useState(false);
@@ -159,7 +161,7 @@ export default function ProfilePage() {
               onClick={() => photoRef.current?.click()}
               title="Change photo"
               aria-label="Change profile photo"
-              className={`block rounded-full ${photoBusy ? 'opacity-60' : ''}`}
+              className={`tn-glow block rounded-full ${photoBusy ? 'opacity-60' : ''}`}
             >
               <Avatar
                 name={form.name}
@@ -195,7 +197,7 @@ export default function ProfilePage() {
             </div>
             {!editing && (
               <Button onClick={() => { setEditing(true); setSaved(false); }}>
-                Edit profile
+                {t('Edit profile')}
               </Button>
             )}
           </div>
@@ -225,12 +227,14 @@ export default function ProfilePage() {
             </label>
             {saveError && <p className="mt-3 text-sm text-rose-600" role="alert">{saveError}</p>}
             <div className="mt-5 flex gap-2">
-              <Button onClick={() => void save()} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
+              <Button onClick={() => void save()} disabled={saving}>{saving ? 'Saving…' : t('Save changes')}</Button>
               <Button variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
             </div>
           </Card>
         ) : (
           <>
+            <SignatureCard />
+
             <Card className="p-6">
               <h2 className="text-xl font-bold text-ink">About {firstName}</h2>
               <p className="mt-3 text-ink">
@@ -268,7 +272,6 @@ export default function ProfilePage() {
               </div>
             </Card>
 
-            <SignatureCard />
             <StudentCard />
             <LoyaltyCard />
 

@@ -48,7 +48,13 @@ const SOCIALS = [
   { label: 'TripNest on LinkedIn', icon: <LinkedinIcon size={16} /> },
 ];
 
-const PROVIDERS = ['MTN MoMo', 'Telecel Cash', 'AirtelTigo', 'Visa · Mastercard'];
+const PROVIDERS = [
+  { name: 'MTN Mobile Money', src: '/payments/mtn.svg' },
+  { name: 'Telecel Cash', src: '/payments/telecel.png' },
+  { name: 'AirtelTigo Money', src: '/payments/airteltigo.png' },
+  { name: 'Visa', src: '/payments/visa.svg' },
+  { name: 'Mastercard', src: '/payments/mastercard.svg' },
+];
 
 function FooterLink({ label, to }: { label: string; to: string }) {
   const cls = 'text-sm text-black no-underline transition-colors hover:text-black';
@@ -82,8 +88,7 @@ export default function Footer() {
               </span>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-black">
-              Verified homes across Ghana with identity-checked hosts and escrow-protected
-              payments — from one night to a whole year.
+              {t('Verified homes across Ghana with identity-checked hosts and escrow-protected payments — from one night to a whole year.')}
             </p>
             <div className="mt-5 flex items-center gap-2">
               {SOCIALS.map((s) => (
@@ -108,7 +113,7 @@ export default function Footer() {
                 <ul className="space-y-2.5">
                   {col.links.map((l) => (
                     <li key={l.label}>
-                      <FooterLink {...l} />
+                      <FooterLink to={l.to} label={t(l.label)} />
                     </li>
                   ))}
                 </ul>
@@ -120,22 +125,28 @@ export default function Footer() {
         {/* Trust strip */}
         <div className="flex flex-col gap-4 border-t border-black py-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-sm text-black">We accept</span>
+            <span className="mr-1 text-sm text-black">{t('We accept')}</span>
             {PROVIDERS.map((p) => (
               <span
-                key={p}
-                className="rounded-full border border-black px-3 py-1 text-xs font-semibold text-white/200"
+                key={p.name}
+                title={p.name}
+                className="flex h-9 items-center rounded-lg border border-gray-200 bg-white px-2.5"
               >
-                {p}
+                <img
+                  src={p.src}
+                  alt={p.name}
+                  loading="lazy"
+                  className="h-6 w-auto object-contain"
+                />
               </span>
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-black">
             <span className="flex items-center gap-1.5">
-              <ShieldIcon size={14} className="text-emerald-300" /> Escrow-protected payments
+              <ShieldIcon size={14} className="text-emerald-300" /> {t('Escrow-protected payments')}
             </span>
             <span className="flex items-center gap-1.5">
-              <MapPinIcon size={14} className="text-emerald-300" /> Made in Ghana
+              <MapPinIcon size={14} className="text-emerald-300" /> {t('Made in Ghana')}
             </span>
           </div>
         </div>

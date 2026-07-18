@@ -287,7 +287,7 @@ function Hero() {
               to="/search"
               className="inline-flex items-center gap-1.5 px-2 py-3 text-sm font-semibold text-emerald-200 no-underline transition-colors hover:text-white"
             >
-              <SearchIcon size={15} /> Browse homes first →
+              <SearchIcon size={15} /> Explore →
             </Link>
           </div>
         </Reveal>

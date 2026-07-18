@@ -4,6 +4,7 @@ import WorkspaceSidebar, { type WorkspaceNavGroup } from '../components/workspac
 import TopBar from '../components/tenant/TopBar';
 import Footer from '../components/tenant/Footer';
 import ChatButton from '../components/tenant/ChatButton';
+import { useIsDesktop } from '../hooks/useIsDesktop';
 
 interface RoleWorkspaceLayoutProps {
   nav: WorkspaceNavGroup[];
@@ -15,14 +16,16 @@ interface RoleWorkspaceLayoutProps {
 export default function RoleWorkspaceLayout({ nav, roleLabel, accountPath }: RoleWorkspaceLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopHidden, setDesktopHidden] = useState(false);
+  const isDesktop = useIsDesktop();
+  const sidebarOpen = isDesktop ? !desktopHidden : mobileOpen;
 
   // The hamburger collapses the sidebar on large screens (more room for
-  // content) and opens the drawer on small ones.
+  // content) and toggles the drawer on small ones.
   const toggleSidebar = () => {
-    if (window.matchMedia('(min-width: 1024px)').matches) {
+    if (isDesktop) {
       setDesktopHidden((v) => !v);
     } else {
-      setMobileOpen(true);
+      setMobileOpen((v) => !v);
     }
   };
 
@@ -37,7 +40,7 @@ export default function RoleWorkspaceLayout({ nav, roleLabel, accountPath }: Rol
         desktopHidden={desktopHidden}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar onMenu={toggleSidebar} />
+        <TopBar onMenu={toggleSidebar} sidebarOpen={sidebarOpen} />
         <main className="flex-1 p-4 sm:p-8">
           <Outlet />
         </main>

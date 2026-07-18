@@ -12,9 +12,9 @@ const IconChart = () => (
     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
   </svg>
 );
-const IconCheckbox = () => (
+const IconClipboardList = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+    <rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><line x1="9" y1="11" x2="15" y2="11" /><line x1="9" y1="15" x2="15" y2="15" />
   </svg>
 );
 const IconCalendar = () => (
@@ -75,7 +75,7 @@ const Globe = () => (
 
 const PRIMARY_NAV: NavItem[] = [
   { id: 'overview', label: 'Overview', icon: <IconChart /> },
-  { id: 'reservations', label: 'Reservations', icon: <IconCheckbox /> },
+  { id: 'reservations', label: 'Reservations', icon: <IconClipboardList /> },
   { id: 'calendar', label: 'Calendar', icon: <IconCalendar /> },
   { id: 'pricing', label: 'Pricing', icon: <IconCoin /> },
   { id: 'statements', label: 'Statements', icon: <IconFile /> },

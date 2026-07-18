@@ -18,6 +18,31 @@ export async function getBookings(): Promise<Booking[]> {
 const utcMidnight = (isoDate: string) =>
   isoDate.length === 10 ? `${isoDate}T00:00:00Z` : isoDate;
 
+/**
+ * The server accepts overlapping bookings while payment is pending, so the
+ * same dates can be reserved twice from the UI. Guard client-side: does the
+ * signed-in user already hold a live (not cancelled/finished) booking for
+ * this property that overlaps the requested span?
+ * Dates compare as YYYY-MM-DD prefixes — API datetimes are zone-less and
+ * Date.getTime() shifts them on non-UTC machines.
+ */
+export async function findOverlappingBooking(
+  propertyId: string,
+  checkInISO: string,
+  checkOutISO: string,
+): Promise<{ checkIn: string; checkOut: string } | null> {
+  const dtos = await apiGetList<BookingResponseDto>('/api/bookings/user/my-bookings');
+  const live = dtos.filter(
+    (b) => b.propertyId === propertyId && [0, 1, 2].includes(b.status), // Pending/Confirmed/CheckedIn
+  );
+  for (const b of live) {
+    const start = b.checkInDate.slice(0, 10);
+    const end = b.checkOutDate.slice(0, 10);
+    if (start < checkOutISO && checkInISO < end) return { checkIn: start, checkOut: end };
+  }
+  return null;
+}
+
 export async function createBooking(input: {
   propertyId: string;
   checkInDate: string;

@@ -6,6 +6,8 @@ import Button from '../ui/Button';
 import { formatCedi } from '../../lib/format';
 import { quotePrice } from '../../store/bookingStore';
 import { isSpanAvailable } from '../../api/calendar';
+import { findOverlappingBooking } from '../../api/bookings';
+import { useT } from '../../lib/i18n';
 import { CheckIcon, ShieldIcon } from './icons';
 
 function todayISO(): string {
@@ -26,6 +28,7 @@ export interface BookingSelection {
 
 /** Interactive reserve widget: pick dates + guests, see a live quote. */
 export default function BookingWidget({ property }: { property: Property }) {
+  const t = useT();
   const navigate = useNavigate();
   const defaultIn = todayISO();
   const defaultNights = property.period === 'month' ? 30 : 7;
@@ -39,7 +42,7 @@ export default function BookingWidget({ property }: { property: Property }) {
   // Result is keyed by the span it answered for; a span with no answer yet
   // reads as 'checking' (avoids a synchronous reset inside the effect).
   const [availabilityResult, setAvailabilityResult] = useState<{
-    key: string; value: 'open' | 'taken' | 'unknown';
+    key: string; value: 'open' | 'taken' | 'mine' | 'unknown';
   }>({ key: '', value: 'unknown' });
 
   const quote = useMemo(
@@ -55,8 +58,16 @@ export default function BookingWidget({ property }: { property: Property }) {
   useEffect(() => {
     if (quote.nights <= 0) return;
     let cancelled = false;
-    isSpanAvailable(property.id, checkInISO, checkOutISO)
-      .then((open) => !cancelled && setAvailabilityResult({ key: spanKey, value: open ? 'open' : 'taken' }))
+    Promise.all([
+      isSpanAvailable(property.id, checkInISO, checkOutISO),
+      // The server accepts duplicate bookings while payment is pending — flag
+      // spans the user has already reserved themselves.
+      findOverlappingBooking(property.id, checkInISO, checkOutISO).catch(() => null),
+    ])
+      .then(([open, ownBooking]) => {
+        if (cancelled) return;
+        setAvailabilityResult({ key: spanKey, value: ownBooking ? 'mine' : open ? 'open' : 'taken' });
+      })
       .catch(() => !cancelled && setAvailabilityResult({ key: spanKey, value: 'unknown' }));
     return () => {
       cancelled = true;
@@ -64,11 +75,11 @@ export default function BookingWidget({ property }: { property: Property }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spanKey, quote.nights]);
 
-  const availability: 'checking' | 'open' | 'taken' | 'unknown' =
+  const availability: 'checking' | 'open' | 'taken' | 'mine' | 'unknown' =
     quote.nights > 0 && availabilityResult.key !== spanKey ? 'checking' : availabilityResult.value;
 
   const reserve = () => {
-    if (!valid || availability === 'taken') return;
+    if (!valid || availability === 'taken' || availability === 'mine') return;
     const selection: BookingSelection = { checkInISO, checkOutISO, guests };
     navigate(`/checkout/${property.id}`, { state: selection });
   };
@@ -83,7 +94,7 @@ export default function BookingWidget({ property }: { property: Property }) {
       <div className="mt-4 space-y-2">
         <div className="grid grid-cols-2 gap-2">
           <label className="rounded-lg border border-gray-200 px-3 py-2">
-            <span className="block text-[11px] text-muted">Check in</span>
+            <span className="block text-[11px] text-muted">{t('Check in')}</span>
             <input
               type="date"
               value={checkInISO}
@@ -97,7 +108,7 @@ export default function BookingWidget({ property }: { property: Property }) {
             />
           </label>
           <label className="rounded-lg border border-gray-200 px-3 py-2">
-            <span className="block text-[11px] text-muted">Check out</span>
+            <span className="block text-[11px] text-muted">{t('Check out')}</span>
             <input
               type="date"
               value={checkOutISO}
@@ -110,7 +121,7 @@ export default function BookingWidget({ property }: { property: Property }) {
 
         <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
           <div>
-            <p className="text-[11px] text-muted">Guests</p>
+            <p className="text-[11px] text-muted">{t('Guests')}</p>
             <p className="text-sm font-medium text-ink">
               {guests} Guest{guests > 1 ? 's' : ''}
             </p>
@@ -147,11 +158,11 @@ export default function BookingWidget({ property }: { property: Property }) {
             <span className="text-ink">{formatCedi(quote.subtotal)}</span>
           </div>
           <div className="flex justify-between text-muted">
-            <span>Service fee</span>
+            <span>{t('Service fee')}</span>
             <span className="text-ink">{formatCedi(quote.serviceFee)}</span>
           </div>
           <div className="flex justify-between border-t border-gray-100 pt-1.5 font-semibold text-ink">
-            <span>Total</span>
+            <span>{t('Total')}</span>
             <span>{formatCedi(quote.total)}</span>
           </div>
         </div>
@@ -160,31 +171,36 @@ export default function BookingWidget({ property }: { property: Property }) {
       <Button
         className="mt-4 w-full"
         onClick={reserve}
-        disabled={!valid || availability === 'taken' || availability === 'checking'}
+        disabled={!valid || availability === 'taken' || availability === 'mine' || availability === 'checking'}
       >
         {availability === 'checking'
-          ? 'Checking dates…'
+          ? t('Checking dates…')
           : property.tag === 'Instant Book'
-            ? 'Instant Book'
-            : 'Reserve'}
+            ? t('Instant Book')
+            : t('Reserve')}
       </Button>
       {!valid && (
         <p className="mt-2 text-center text-xs text-rose-600">
-          Check-out must be after check-in.
+          {t('Check-out must be after check-in.')}
         </p>
       )}
       {valid && availability === 'taken' && (
         <p className="mt-2 text-center text-xs text-rose-600" role="alert">
-          Those dates are already booked or blocked — try different ones.
+          {t('Those dates are already booked or blocked — try different ones.')}
+        </p>
+      )}
+      {valid && availability === 'mine' && (
+        <p className="mt-2 text-center text-xs text-rose-600" role="alert">
+          {t('You already have a booking here for these dates — see My Bookings.')}
         </p>
       )}
       {valid && availability === 'open' && (
         <p className="mt-2 flex items-center justify-center gap-1 text-center text-xs font-medium text-brand">
-          <CheckIcon size={12} /> Dates available
+          <CheckIcon size={12} /> {t('Dates available')}
         </p>
       )}
       <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted">
-        <ShieldIcon size={13} className="text-brand" /> Secure payment via Mobile Money
+        <ShieldIcon size={13} className="text-brand" /> {t('Secure payment via Mobile Money')}
       </p>
     </Card>
   );

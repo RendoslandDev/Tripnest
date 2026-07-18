@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import {
-  MenuIcon, BellIcon, MailIcon,
+  MenuIcon, XIcon, BellIcon, MailIcon,
 } from './icons';
 import { useSession } from '../../store/authStore';
 import { messagesPathForRole, profilePathForRole } from '../../lib/roleHome';
@@ -8,6 +8,7 @@ import Avatar from '../ui/Avatar';
 
 interface TopBarProps {
   onMenu: () => void;
+  sidebarOpen?: boolean;
 }
 
 /** Circular hairline icon button, Wander-style. */
@@ -41,7 +42,7 @@ function IconButton({
   );
 }
 
-export default function TopBar({ onMenu }: TopBarProps) {
+export default function TopBar({ onMenu, sidebarOpen = false }: TopBarProps) {
   const navigate = useNavigate();
   const session = useSession();
 
@@ -51,7 +52,8 @@ export default function TopBar({ onMenu }: TopBarProps) {
 
       <button
   onClick={onMenu}
-  aria-label="Toggle sidebar"
+  aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+  aria-expanded={sidebarOpen}
   className="
     flex h-10 w-10 shrink-0 items-center justify-center
     rounded-full
@@ -61,7 +63,7 @@ export default function TopBar({ onMenu }: TopBarProps) {
     hover:bg-brand/90
   "
 >
-  <MenuIcon size={22} />
+  {sidebarOpen ? <XIcon size={22} /> : <MenuIcon size={22} />}
 </button>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-2.5">

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getSignatureInfo, uploadSignature, type SignatureInfo } from '../../api/profile';
+import { useT } from '../../lib/i18n';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 
@@ -15,7 +16,10 @@ export default function SignatureCard() {
   const [ghanaCard, setGhanaCard] = useState('');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  // Render-stable "now" for the cooldown comparison (impure calls can't run in render).
+  const [mountedAt] = useState(() => Date.now());
   const fileRef = useRef<HTMLInputElement>(null);
+  const t = useT();
 
   useEffect(() => {
     getSignatureInfo().then(setInfo).catch(() => setInfo(null));
@@ -23,7 +27,7 @@ export default function SignatureCard() {
 
   const replacing = Boolean(info?.hasSignature);
   const cooldownActive =
-    replacing && info?.editableFrom != null && new Date(info.editableFrom).getTime() > Date.now();
+    replacing && info?.editableFrom != null && new Date(info.editableFrom).getTime() > mountedAt;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +51,7 @@ export default function SignatureCard() {
 
   return (
     <Card className="p-6">
-      <h2 className="text-lg font-bold text-ink">Signature</h2>
+      <h2 className="text-lg font-bold text-ink">{t('Signature')}</h2>
       <p className="mt-1 text-sm text-muted">
         {replacing
           ? `On file since ${info?.updatedAt ? new Date(info.updatedAt).toLocaleDateString() : '—'}. Used when you sign agreements.`
@@ -61,14 +65,25 @@ export default function SignatureCard() {
         </p>
       ) : (
         <form onSubmit={submit} className="mt-3 space-y-2">
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm"
-            aria-label="Signature image"
-          />
+          <label className="tn-glow flex cursor-pointer items-center justify-between gap-3 rounded-xl border-2 border-dashed border-brand/40 bg-brand-50/50 px-4 py-3 hover:border-brand">
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold text-ink">
+                {file ? file.name : t('Choose your signature image')}
+              </span>
+              <span className="block text-xs text-muted">PNG or JPG — a clear photo or scan of your signature</span>
+            </span>
+            <span className="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">
+              {t('Browse…')}
+            </span>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="hidden"
+              aria-label="Signature image"
+            />
+          </label>
           {replacing && (
             <>
               <input

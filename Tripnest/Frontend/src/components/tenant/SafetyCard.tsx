@@ -7,6 +7,7 @@ import { getNotificationPrefs, updateNotificationPrefs, type NotificationPrefs }
 import { ApiError } from '../../api/client';
 import Card from '../ui/Card';
 import Toggle from '../ui/Toggle';
+import Checkbox from '../ui/Checkbox';
 import Button from '../ui/Button';
 import { useT } from '../../lib/i18n';
 import { BellIcon, ShieldIcon } from './icons';
@@ -183,12 +184,7 @@ export default function SafetyCard({ bookingId }: {
 
       <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
         <label className="flex items-center gap-2 text-xs text-muted">
-          <input
-            type="checkbox"
-            checked={shareLocation}
-            onChange={(e) => setShareLocation(e.target.checked)}
-            className="accent-brand"
-          />
+          <Checkbox checked={shareLocation} onChange={setShareLocation} />
           {t('Share my location with the check-in')}
         </label>
         {bookingId ? (

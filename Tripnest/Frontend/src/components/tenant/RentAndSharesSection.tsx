@@ -38,7 +38,8 @@ export default function RentAndSharesSection() {
     setShares(perBooking.flat().filter((sh) => sh.participantUserId === me && sh.status === 0));
   };
 
-  useEffect(() => { void load(); }, []);
+  // Deferred a tick: the linter can't see that load() only sets state after awaits.
+  useEffect(() => { void Promise.resolve().then(load); }, []);
 
   const settle = async (
     id: string,

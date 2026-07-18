@@ -26,7 +26,9 @@ export default function SocialSignIn({ onSignedIn, signupRole }: { onSignedIn: (
   const ref = useRef<HTMLDivElement>(null);
   // The GIS callback closure outlives renders — a ref keeps the CURRENT tab's role choice visible to it.
   const signupRoleRef = useRef<Role | undefined>(signupRole);
-  signupRoleRef.current = signupRole;
+  useEffect(() => {
+    signupRoleRef.current = signupRole;
+  }, [signupRole]);
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) return;

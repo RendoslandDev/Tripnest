@@ -6,6 +6,7 @@ import { useAsync } from '../hooks/useAsync';
 import AsyncBoundary from '../components/AsyncBoundary';
 import Card from '../components/ui/Card';
 import Badge, { type BadgeTone } from '../components/ui/Badge';
+import Checkbox from '../components/ui/Checkbox';
 
 const PRIORITY_TONE: Record<TaskPriority, BadgeTone> = {
   high: 'red',
@@ -31,12 +32,7 @@ function TaskRow({
 }) {
   return (
     <li className="flex items-center gap-4 px-6 py-4">
-      <input
-        type="checkbox"
-        checked={done}
-        onChange={onToggle}
-        className="h-4 w-4 shrink-0 accent-brand"
-      />
+      <Checkbox checked={done} onChange={onToggle} ariaLabel={`Mark "${task.title}" as done`} />
       <div className="min-w-0 flex-1">
         <p className={`truncate font-semibold ${done ? 'text-muted line-through' : 'text-ink'}`}>
           {task.title}

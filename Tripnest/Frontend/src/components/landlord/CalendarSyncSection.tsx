@@ -15,7 +15,10 @@ import Button from '../ui/Button';
 export default function CalendarSyncSection() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [propertyId, setPropertyId] = useState('');
-  const [feedUrl, setFeedUrl] = useState<string | null>(null);
+  // Keyed by the property it answered for — a key mismatch reads as "not loaded
+  // yet", so switching properties needs no synchronous reset inside the effect.
+  const [feedResult, setFeedResult] = useState<{ key: string; url: string | null }>({ key: '', url: null });
+  const feedUrl = feedResult.key === propertyId ? feedResult.url : null;
   const [feeds, setFeeds] = useState<ExternalCalendarDto[]>([]);
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
@@ -31,8 +34,9 @@ export default function CalendarSyncSection() {
 
   useEffect(() => {
     if (!propertyId) return;
-    setFeedUrl(null);
-    getIcalFeedUrl(propertyId).then(setFeedUrl).catch(() => setFeedUrl(null));
+    getIcalFeedUrl(propertyId)
+      .then((url) => setFeedResult({ key: propertyId, url }))
+      .catch(() => setFeedResult({ key: propertyId, url: null }));
     getExternalCalendars(propertyId).then(setFeeds).catch(() => setFeeds([]));
   }, [propertyId]);
 

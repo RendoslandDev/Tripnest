@@ -13,13 +13,12 @@ import { formatCedi } from '../../lib/format';
 import { useSession } from '../../store/authStore';
 import { useT } from '../../lib/i18n';
 import {
-  CalendarIcon, CardIcon, HeartIcon, ToolIcon, SearchIcon, PlusIcon, MessageIcon,
+  CalendarIcon, CardIcon, HeartIcon, ToolIcon, SearchIcon, MessageIcon,
   MapPinIcon,
 } from '../../components/tenant/icons';
 
 const QUICK_ACTIONS = [
   { label: 'Search Properties', icon: <SearchIcon size={16} />, to: '/search' },
-  { label: 'Add Property', icon: <PlusIcon size={16} />, to: '/landlord' },
   { label: 'Messages', icon: <MessageIcon size={16} />, to: '/messages' },
   { label: 'Make Payment', icon: <CardIcon size={16} />, to: '/payments' },
   { label: 'Report an Issue', icon: <ToolIcon size={16} />, to: '/maintenance' },

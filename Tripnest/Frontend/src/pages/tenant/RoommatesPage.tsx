@@ -6,7 +6,9 @@ import {
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
+import Checkbox from '../../components/ui/Checkbox';
 import { formatCedi } from '../../lib/format';
+import { useT } from '../../lib/i18n';
 
 const EMPTY: RoommateProfileInput = {
   bio: '', university: '', preferredLocation: '', monthlyBudget: 500, moveInDate: undefined,
@@ -17,7 +19,7 @@ const EMPTY: RoommateProfileInput = {
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="flex items-center gap-2 text-sm text-ink">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <Checkbox checked={checked} onChange={onChange} />
       {label}
     </label>
   );
@@ -28,6 +30,7 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
  * (hard conflicts are filtered out server-side), and read the AI take on why a match works.
  */
 export default function RoommatesPage() {
+  const t = useT();
   const [form, setForm] = useState<RoommateProfileInput>(EMPTY);
   const [hasProfile, setHasProfile] = useState(false);
   const [matches, setMatches] = useState<RoommateMatch[]>([]);
@@ -97,7 +100,7 @@ export default function RoommatesPage() {
 
   return (
     <div>
-      <h1 className="mb-2 text-3xl font-bold text-ink">Find a roommate</h1>
+      <h1 className="mb-2 text-3xl font-bold text-ink">{t('Find a roommate')}</h1>
       <p className="mb-6 text-sm text-muted">
         For students and long-term stays: share your preferences, see who's compatible. Matches
         show identity verification so you know who you're talking to.

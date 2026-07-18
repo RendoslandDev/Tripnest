@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { SparkleIcon, MailIcon, PhoneIcon, ChevronDownIcon } from '../../components/tenant/icons';
+import { SparkleIcon, MailIcon, ChevronDownIcon } from '../../components/tenant/icons';
 import { openAssistant } from '../../store/assistantStore';
+import { useT } from '../../lib/i18n';
 
 const FAQS = [
   { q: 'How do I know a listing is verified?', a: 'Every verified listing carries a TripNest ID and a green Verified badge after our team inspects the property and confirms ownership.' },
@@ -52,27 +53,27 @@ function ContactCard({ icon, label, value, href, onClick }: {
 }
 
 export default function HelpPage() {
+  const t = useT();
   return (
     <div className="max-w-3xl">
-      <h1 className="mb-6 text-3xl font-bold text-ink">Help &amp; Support</h1>
+      <h1 className="mb-6 text-3xl font-bold text-ink">{t('Help & Support')}</h1>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <ContactCard icon={<SparkleIcon size={18} />} label="AI assistant" value="Ask TripNest" onClick={openAssistant} />
-        <ContactCard icon={<MailIcon size={18} />} label="Email" value="help@tripnest.gh" href="mailto:help@tripnest.gh" />
-        <ContactCard icon={<PhoneIcon size={18} />} label="Phone" value="+233 24 123 4567" href="tel:+233241234567" />
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <ContactCard icon={<SparkleIcon size={18} />} label={t('AI assistant')} value={t('Ask TripNest')} onClick={openAssistant} />
+        <ContactCard icon={<MailIcon size={18} />} label={t('Email')} value="help@tripnest.gh" href="mailto:help@tripnest.gh" />
       </div>
 
       <Card className="p-6">
-        <h2 className="mb-2 text-lg font-bold text-ink">Frequently asked questions</h2>
+        <h2 className="mb-2 text-lg font-bold text-ink">{t('Frequently asked questions')}</h2>
         <div className="divide-y divide-gray-100">
           {FAQS.map((f) => (
             <Faq key={f.q} q={f.q} a={f.a} />
           ))}
         </div>
         <div className="mt-5 rounded-xl bg-brand-50 p-4">
-          <p className="font-semibold text-ink">Still need help?</p>
+          <p className="font-semibold text-ink">{t('Still need help?')}</p>
           <p className="mb-3 text-sm text-muted">Ask the assistant — it loops in our support team whenever a human is needed.</p>
-          <Button size="sm" onClick={openAssistant}>Contact support</Button>
+          <Button size="sm" onClick={openAssistant}>{t('Contact support')}</Button>
         </div>
       </Card>
     </div>

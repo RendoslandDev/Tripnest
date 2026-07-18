@@ -3,6 +3,7 @@ import { getProperties } from '../../api/properties';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import PropertyCard from '../../components/tenant/PropertyCard';
+import { useT } from '../../lib/i18n';
 import { SearchIcon } from '../../components/tenant/icons';
 
 const CATEGORIES = ['All', 'Apartments', 'Student Rooms', 'Short Stay'];
@@ -13,6 +14,7 @@ export default function SearchPage() {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [sort, setSort] = useState<Sort>('recommended');
+  const t = useT();
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -39,7 +41,7 @@ export default function SearchPage() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by title or location…"
+            placeholder={t('Search by title or location…')}
             className="w-full rounded-full border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-ink outline-none focus:border-brand"
           />
         </div>
@@ -48,10 +50,10 @@ export default function SearchPage() {
           onChange={(e) => setSort(e.target.value as Sort)}
           className="rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm text-ink outline-none focus:border-brand"
         >
-          <option value="recommended">Recommended</option>
-          <option value="price-asc">Price: Low to High</option>
-          <option value="price-desc">Price: High to Low</option>
-          <option value="rating">Top rated</option>
+          <option value="recommended">{t('Recommended')}</option>
+          <option value="price-asc">{t('Price: Low to High')}</option>
+          <option value="price-desc">{t('Price: High to Low')}</option>
+          <option value="rating">{t('Top rated')}</option>
         </select>
       </div>
 
@@ -66,7 +68,7 @@ export default function SearchPage() {
                 : 'border-gray-200 text-gray-600 hover:bg-gray-100'
             }`}
           >
-            {c}
+            {t(c)}
           </button>
         ))}
       </div>

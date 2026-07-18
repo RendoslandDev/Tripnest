@@ -188,6 +188,103 @@ const STRINGS: Record<string, Entry> = {
   'Invite Now': { tw: 'To nsa frɛ seesei', fr: 'Inviter maintenant' },
   'Link copied!': { tw: 'Wɔakrɔn link no!', fr: 'Lien copié !' },
 
+  // Search page
+  'Search by title or location…': { tw: 'Hwehwɛ wɔ din anaa beaeɛ so…', fr: 'Rechercher par titre ou lieu…' },
+  'Recommended': { tw: 'Nea yɛkamfo', fr: 'Recommandé' },
+  'Price: Low to High': { tw: 'Boɔ: ketewa kɔ kɛseɛ', fr: 'Prix : croissant' },
+  'Price: High to Low': { tw: 'Boɔ: kɛseɛ kɔ ketewa', fr: 'Prix : décroissant' },
+  'Top rated': { tw: 'Nea wɔpene so paa', fr: 'Les mieux notés' },
+  'All': { tw: 'Ne nyinaa', fr: 'Tout' },
+  'Apartments': { tw: 'Adan', fr: 'Appartements' },
+  'Student Rooms': { tw: 'Sukuufoɔ adan', fr: 'Chambres étudiantes' },
+  'Short Stay': { tw: 'Ɛda kakra', fr: 'Court séjour' },
+
+  // Bookings page
+  'Upcoming': { tw: 'Nea ɛreba', fr: 'À venir' },
+  'Active': { tw: 'Ɛrekɔ so', fr: 'En cours' },
+  'Past': { tw: 'Nea atwam', fr: 'Passées' },
+  'Cancelled': { tw: 'Wɔatwa mu', fr: 'Annulées' },
+  'Completed': { tw: 'Awie', fr: 'Terminée' },
+  'View property': { tw: 'Hwɛ ofie no', fr: 'Voir le logement' },
+  'No bookings yet.': { tw: 'Adan biara nni ha.', fr: 'Aucune réservation pour l\'instant.' },
+
+  // Saved listings
+  'Saved Listings': { tw: 'Afie a woakora', fr: 'Annonces enregistrées' },
+
+  // Empty states
+  'You haven’t saved any listings yet.': {
+    tw: 'Wonkoraa afie biara so.',
+    fr: 'Vous n\'avez encore enregistré aucune annonce.',
+  },
+  "You're all caught up.": { tw: 'Woahu ne nyinaa.', fr: 'Vous êtes à jour.' },
+  'You have no agreements yet.': { tw: 'Wonni apam biara.', fr: 'Vous n\'avez pas encore de contrat.' },
+  'No conversations yet.': { tw: 'Nkɔmmɔ biara nni ha.', fr: 'Aucune conversation pour l\'instant.' },
+  'Chat with landlords, caretakers and support.': {
+    tw: 'Ne afiewuranom, ahwɛfoɔ ne mmoafoɔ bɔ nkɔmmɔ.',
+    fr: 'Discutez avec les propriétaires, concierges et l\'assistance.',
+  },
+  'Find a roommate': { tw: 'Hwehwɛ obi a wo ne no bɛtena', fr: 'Trouver un colocataire' },
+
+  // Booking widget
+  'Check in': { tw: 'Bɛda mu da', fr: 'Arrivée' },
+  'Check out': { tw: 'Bɛfiri da', fr: 'Départ' },
+  'Guests': { tw: 'Ahɔhoɔ', fr: 'Voyageurs' },
+  'Service fee': { tw: 'Adwuma ho ka', fr: 'Frais de service' },
+  'Total': { tw: 'Ne nyinaa', fr: 'Total' },
+  'Reserve': { tw: 'Gye ɛdan no', fr: 'Réserver' },
+  'Instant Book': { tw: 'Gye ntɛm', fr: 'Réservation immédiate' },
+  'Checking dates…': { tw: 'Yɛrehwɛ nna no…', fr: 'Vérification des dates…' },
+  'Dates available': { tw: 'Nna no da hɔ', fr: 'Dates disponibles' },
+  'Check-out must be after check-in.': {
+    tw: 'Ɛsɛ sɛ bɛfiri da no di bɛda mu da no akyi.',
+    fr: 'Le départ doit être après l\'arrivée.',
+  },
+  'Those dates are already booked or blocked — try different ones.': {
+    tw: 'Wɔagye nna no dada — sɔ nna foforɔ hwɛ.',
+    fr: 'Ces dates sont déjà réservées ou bloquées — essayez-en d\'autres.',
+  },
+  'You already have a booking here for these dates — see My Bookings.': {
+    tw: 'Woagye ɛdan wɔ nna yi mu dada — hwɛ wo adan.',
+    fr: 'Vous avez déjà une réservation ici pour ces dates — voir Mes réservations.',
+  },
+  'Secure payment via Mobile Money': {
+    tw: 'Sikatua a ahobammɔ wom wɔ Mobile Money so',
+    fr: 'Paiement sécurisé via Mobile Money',
+  },
+
+  // Footer
+  'Search homes': { tw: 'Hwehwɛ afie', fr: 'Rechercher des logements' },
+  'Nearby places': { tw: 'Mmeaeɛ a ɛbɛn', fr: 'Lieux à proximité' },
+  'Saved listings': { tw: 'Nea woakora', fr: 'Annonces enregistrées' },
+  'Why TripNest': { tw: 'Adɛn nti TripNest', fr: 'Pourquoi TripNest' },
+  'Become a landlord': { tw: 'Bɛyɛ ofiewura', fr: 'Devenir propriétaire' },
+  'Host dashboard': { tw: 'Ofiewura dwumadibea', fr: 'Tableau de bord hôte' },
+  'Help & support': { tw: 'Mmoa', fr: 'Aide et assistance' },
+  'Terms & conditions': { tw: 'Mmara ne nhyehyɛeɛ', fr: 'Conditions générales' },
+  'Privacy policy': { tw: 'Kokoam nsɛm ho mmara', fr: 'Politique de confidentialité' },
+  'We accept': { tw: 'Yɛgye', fr: 'Nous acceptons' },
+  'Escrow-protected payments': { tw: 'Sikatua a wɔabɔ ho ban', fr: 'Paiements protégés par séquestre' },
+  'Made in Ghana': { tw: 'Wɔyɛɛ no Ghana', fr: 'Fabriqué au Ghana' },
+  'Verified homes across Ghana with identity-checked hosts and escrow-protected payments — from one night to a whole year.': {
+    tw: 'Afie a wɔahwɛ mu wɔ Ghana nyinaa, afiewuranom a wɔahwɛ wɔn ho nsɛm ne sikatua a wɔabɔ ho ban — ɛfiri anadwo baako kosi afe mu.',
+    fr: 'Des logements vérifiés partout au Ghana, avec des hôtes à l\'identité contrôlée et des paiements protégés par séquestre — d\'une nuit à une année entière.',
+  },
+
+  // Help page
+  'AI assistant': { tw: 'AI boafoɔ', fr: 'Assistant IA' },
+  'Ask TripNest': { tw: 'Bisa TripNest', fr: 'Demander à TripNest' },
+  'Email': { fr: 'E-mail' },
+  'Frequently asked questions': { tw: 'Nsɛmmisa a wɔtaa bisa', fr: 'Questions fréquentes' },
+  'Still need help?': { tw: 'Wohia mmoa bio?', fr: 'Besoin d\'aide supplémentaire ?' },
+  'Contact support': { tw: 'Frɛ mmoafoɔ', fr: 'Contacter l\'assistance' },
+
+  // Profile page
+  'Edit profile': { tw: 'Sesa wo ho nsɛm', fr: 'Modifier le profil' },
+  'Save changes': { tw: 'Kora nsesaeɛ no', fr: 'Enregistrer les modifications' },
+  'Signature': { tw: 'Nsaano krataa', fr: 'Signature' },
+  'Choose your signature image': { tw: 'Paw wo nsaano krataa mfoni', fr: 'Choisissez l\'image de votre signature' },
+  'Browse…': { tw: 'Hwehwɛ…', fr: 'Parcourir…' },
+
   // Safety card
   'Safety First': { tw: 'Ahobammɔ di kan', fr: 'Sécurité d\'abord' },
   'SMS notifications': { tw: 'SMS amanneɛbɔ', fr: 'Notifications SMS' },

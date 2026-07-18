@@ -9,6 +9,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge, { type BadgeTone } from '../../components/ui/Badge';
 import { formatCedi } from '../../lib/format';
+import { useT } from '../../lib/i18n';
 import { FileIcon } from '../../components/tenant/icons';
 
 const STATUS: Record<AgreementStatus, { tone: BadgeTone; label: string }> = {
@@ -128,6 +129,7 @@ function AgreementsView({ initial }: { initial: Agreement[] }) {
 
 export default function AgreementsPage() {
   const state = useAsync(getAgreements, []);
+  const t = useT();
 
   return (
     <div>
@@ -137,7 +139,7 @@ export default function AgreementsPage() {
         state={state}
         loadingMessage="Loading agreements…"
         errorMessage="Failed to load agreements."
-        emptyMessage="You have no agreements yet."
+        emptyMessage={t('You have no agreements yet.')}
         isEmpty={(rows) => rows.length === 0}
       >
         {(rows) => <AgreementsView initial={rows} />}

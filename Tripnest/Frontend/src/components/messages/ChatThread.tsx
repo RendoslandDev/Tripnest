@@ -120,9 +120,6 @@ export default function ChatThread({ conversation, onBack, className = '' }: Cha
     stopTypingTimer.current = setTimeout(() => sendStopTyping(convId), 3000);
   };
 
-  const append = (item: Omit<ChatItem, 'id' | 'fromMe' | 'time'>) =>
-    setSent((s) => [...s, { id: Date.now(), fromMe: true, time: 'Now', ...item }]);
-
   const send = async (text: string): Promise<boolean> => {
     clearTimeout(stopTypingTimer.current);
     sendStopTyping(String(conversation.id));
@@ -257,12 +254,20 @@ export default function ChatThread({ conversation, onBack, className = '' }: Cha
           onSendText={send}
           onSendVoice={async (audioUrl, duration) => {
             // Local bubble immediately; the recording then uploads like any attachment.
-            append({ text: '', audioUrl, duration });
+            const tempId = `pending-${Date.now()}`;
+            setSent((s) => [...s, { id: tempId, fromMe: true, time: 'Now', text: '', audioUrl, duration }]);
             try {
               const blob = await fetch(audioUrl).then((r) => r.blob());
               const ext = (blob.type.split('/')[1] || 'webm').split(';')[0];
-              await sendAttachment(conversation.id, new File([blob], `voice-note.${ext}`, { type: blob.type || 'audio/webm' }));
+              const saved = await sendAttachment(conversation.id, new File([blob], `voice-note.${ext}`, { type: blob.type || 'audio/webm' }));
+              setSent((s) => {
+                // The hub echo may already have rendered the saved message.
+                if (s.some((m) => m.id === saved.id)) return s.filter((m) => m.id !== tempId);
+                // Adopt the saved id (so the echo dedupes) but keep the local blob for playback.
+                return s.map((m) => (m.id === tempId ? { ...saved, audioUrl, duration } : m));
+              });
             } catch {
+              setSent((s) => s.filter((m) => m.id !== tempId));
               setBanner('Voice note failed to send.');
             }
           }}

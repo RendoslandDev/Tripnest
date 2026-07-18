@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { Property } from '../../types';
 import { getPropertyById } from '../../api/properties';
-import { createBooking } from '../../api/bookings';
+import { createBooking, findOverlappingBooking } from '../../api/bookings';
 import { initiateEscrow, isSimulatedCheckout, savePendingCheckout } from '../../api/escrow';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
@@ -46,6 +46,17 @@ function Review({ property }: { property: Property }) {
     setError(null);
     try {
       setPhase('booking');
+      // The server accepts duplicate bookings while payment is pending — stop
+      // a repeat reservation of dates the user already holds.
+      const existing = await findOverlappingBooking(
+        property.id, selection.checkInISO, selection.checkOutISO,
+      ).catch(() => null);
+      if (existing) {
+        setError(
+          `You already have a booking here from ${formatDateShort(existing.checkIn)} to ${formatDateShort(existing.checkOut)} — see My Bookings.`,
+        );
+        return;
+      }
       const booking = await createBooking({
         propertyId: property.id,
         checkInDate: selection.checkInISO,

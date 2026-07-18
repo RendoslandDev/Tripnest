@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Property } from '../../types';
 import { formatCedi } from '../../lib/format';
+import { useSavedIds, toggleSaved } from '../../store/savedStore';
 import { AmenityIcon, ShieldIcon, StarIcon } from './icons';
 
 // The tour player (and its clip stores) loads on demand — most visitors
@@ -15,12 +16,15 @@ interface PropertyCardProps {
 }
 
 export default function PropertyCard({ property, initialSaved = false, onToggleSave }: PropertyCardProps) {
-  const [saved, setSaved] = useState(initialSaved);
+  // The shared wishlist store is the truth once loaded; initialSaved only
+  // covers the first paint (e.g. the Saved page, where everything is saved).
+  const savedIds = useSavedIds();
+  const saved = savedIds ? savedIds.has(property.id) : initialSaved;
   const [tourOpen, setTourOpen] = useState(false);
 
   const toggleSave = (e: React.MouseEvent) => {
     e.preventDefault();
-    setSaved((s) => !s);
+    void toggleSaved(property.id);
     onToggleSave?.(property.id);
   };
 

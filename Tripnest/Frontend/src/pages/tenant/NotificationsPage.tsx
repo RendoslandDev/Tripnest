@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Notification, NotificationType } from '../../types';
 import { getNotifications, markAllNotificationsRead, markNotificationRead } from '../../api/notifications';
 import { useAsync } from '../../hooks/useAsync';
+import { useT } from '../../lib/i18n';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -85,6 +86,7 @@ function NotificationsView({ initial }: { initial: Notification[] }) {
 
 export default function NotificationsPage() {
   const state = useAsync(getNotifications, []);
+  const t = useT();
 
   return (
     <div className="max-w-3xl">
@@ -94,7 +96,7 @@ export default function NotificationsPage() {
         state={state}
         loadingMessage="Loading notifications…"
         errorMessage="Failed to load notifications."
-        emptyMessage="You're all caught up."
+        emptyMessage={t("You're all caught up.")}
         isEmpty={(rows) => rows.length === 0}
       >
         {(rows) => <NotificationsView initial={rows} />}

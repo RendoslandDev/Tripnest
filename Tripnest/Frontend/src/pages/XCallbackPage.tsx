@@ -44,15 +44,16 @@ export default function XCallbackPage() {
 
     roleRef.current = consumeXSignupRole() as Role | undefined;
     const callback = consumeXCallback(query);
-    if (!callback) {
-      setError(query.get('error') === 'access_denied'
-        ? 'X sign-in was cancelled.'
-        : 'Could not complete the X sign-in. Please try again.');
-      setBusy(false);
-      return;
-    }
 
     (async () => {
+      await Promise.resolve(); // effects must not set state synchronously
+      if (!callback) {
+        setError(query.get('error') === 'access_denied'
+          ? 'X sign-in was cancelled.'
+          : 'Could not complete the X sign-in. Please try again.');
+        setBusy(false);
+        return;
+      }
       try {
         tokenRef.current = await exchangeXCode(callback.code, callback.verifier, xRedirectUri());
         await finish();

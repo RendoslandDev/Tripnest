@@ -10,6 +10,7 @@ import Badge from '../../components/ui/Badge';
 import TrustScoreBadge from '../../components/tenant/TrustScoreBadge';
 import Avatar from '../../components/ui/Avatar';
 import BookingWidget from '../../components/tenant/BookingWidget';
+import { useSavedIds, toggleSaved } from '../../store/savedStore';
 import { AmenityIcon, ShieldIcon, StarIcon, MapPinIcon } from '../../components/tenant/icons';
 
 // Loaded on demand — see PropertyCard for the same pattern.
@@ -44,6 +45,8 @@ function Gallery({ onPlay }: { onPlay: () => void }) {
 
 function Detail({ property }: { property: Property }) {
   const [tourOpen, setTourOpen] = useState(false);
+  const savedIds = useSavedIds();
+  const saved = savedIds?.has(property.id) ?? false;
 
   return (
     <div>
@@ -66,6 +69,18 @@ function Detail({ property }: { property: Property }) {
                   </span>
                 </Badge>
               )}
+              <button
+                aria-label={saved ? 'Unsave property' : 'Save property'}
+                aria-pressed={saved}
+                onClick={() => void toggleSaved(property.id)}
+                className={`ml-auto flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white ${
+                  saved ? 'text-rose-500' : 'text-gray-500 hover:text-rose-500'
+                }`}
+              >
+                <svg width={17} height={17} viewBox="0 0 24 24" fill={saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+              </button>
             </div>
             <p className="mt-1 flex items-center gap-1.5 text-muted">
               <MapPinIcon size={15} /> {property.location}
@@ -103,7 +118,7 @@ function Detail({ property }: { property: Property }) {
             <Avatar name={property.agent.name} size={44} />
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-ink">{property.agent.name}</p>
-              <p className="text-sm text-muted">{property.agent.role} · {property.agent.phone}</p>
+              <p className="text-sm text-muted">{property.agent.role}</p>
             </div>
             <Button variant="ghost" size="sm">Contact</Button>
           </Card>
