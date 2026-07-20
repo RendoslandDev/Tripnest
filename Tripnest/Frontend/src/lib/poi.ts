@@ -1,4 +1,3 @@
-import type { LatLng } from '../types';
 
 export type PoiCategory =
   | 'hospital' | 'pharmacy' | 'restaurant' | 'shopping' | 'school' | 'bus_stop' | 'fuel';

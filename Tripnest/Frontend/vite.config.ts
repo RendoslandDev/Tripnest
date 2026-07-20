@@ -9,6 +9,11 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    // Pinned: Core's CORS allowlist (and the direct SignalR chat connection)
+    // expects this exact origin — silently drifting to 5174+ when 5173 is
+    // busy breaks auth'd calls in confusing ways. trip-card runs on 5250.
+    port: 5173,
+    strictPort: true,
     proxy: {
       '/api': 'http://localhost:5091',
       '/health': 'http://localhost:5091',

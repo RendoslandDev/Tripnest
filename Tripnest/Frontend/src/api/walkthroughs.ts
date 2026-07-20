@@ -37,6 +37,28 @@ export function uploadWalkthrough(
   return apiUpload<WalkthroughResponseDto>(`/api/properties/${propertyId}/walkthrough`, form);
 }
 
+// Mirror the backend's UploadValidation allowlist so bad picks fail before the upload.
+export const WALKTHROUGH_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.avi', '.webm', '.mkv'] as const;
+export const WALKTHROUGH_VIDEO_MAX_BYTES = 100 * 1024 * 1024; // 100 MB
+
+/**
+ * Upload a landlord-recorded walkthrough video for a property (owner only).
+ * Keeps the file's own name — the backend validates the extension against its
+ * allowlist and checks the bytes match, so renaming would get .mov/.avi/.mkv
+ * files rejected. Sets the property's walkthrough to Pending review; an
+ * Agent/Admin must approve it before the property can go Active.
+ */
+export function uploadWalkthroughFile(
+  propertyId: string,
+  title: string,
+  file: File,
+): Promise<WalkthroughResponseDto> {
+  const form = new FormData();
+  form.append('title', title);
+  form.append('videoFile', file, file.name);
+  return apiUpload<WalkthroughResponseDto>(`/api/properties/${propertyId}/walkthrough`, form);
+}
+
 export function deleteWalkthrough(propertyId: string, walkthroughId: string): Promise<unknown> {
   return apiDelete(`/api/properties/${propertyId}/walkthroughs/${walkthroughId}`);
 }

@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Listing } from '../../types';
 import { createListing, uploadListingPhotos, type NewListingInput } from '../../api/listings';
+import {
+  uploadWalkthroughFile, WALKTHROUGH_VIDEO_EXTENSIONS, WALKTHROUGH_VIDEO_MAX_BYTES,
+} from '../../api/walkthroughs';
 import { cacheListingPhotos } from '../../lib/listingPhotos';
 import { generateWalkthroughClips } from '../../lib/walkthroughGenerator';
 import Card from '../ui/Card';
@@ -26,9 +29,12 @@ export default function AddListingModal({ onCreated, triggerLabel = '+ Add listi
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
-  // Set when the listing saved but its photos didn't — blocks a duplicate resubmit.
-  const [photosFailed, setPhotosFailed] = useState(false);
+  const [video, setVideo] = useState<{ file: File; preview: string } | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  // Set when the listing saved but its media didn't — blocks a duplicate resubmit.
+  const [uploadsFailed, setUploadsFailed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<NewListingInput>({
     title: '',
@@ -53,6 +59,10 @@ export default function AddListingModal({ onCreated, triggerLabel = '+ Add listi
       current.forEach((p) => URL.revokeObjectURL(p.preview));
       return current;
     });
+    setVideo((current) => {
+      if (current) URL.revokeObjectURL(current.preview);
+      return current;
+    });
   }, []);
 
   const addPhotos = (files: FileList | null) => {
@@ -63,6 +73,33 @@ export default function AddListingModal({ onCreated, triggerLabel = '+ Add listi
     setPhotos((p) => [...p, ...picked]);
     // Allow re-selecting the same files after a removal.
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const pickVideo = (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file) return;
+    setVideoError(null);
+    const ext = `.${file.name.split('.').pop()?.toLowerCase() ?? ''}`;
+    if (!(WALKTHROUGH_VIDEO_EXTENSIONS as readonly string[]).includes(ext)) {
+      setVideoError(`Unsupported video format. Allowed: ${WALKTHROUGH_VIDEO_EXTENSIONS.join(', ')}`);
+    } else if (file.size > WALKTHROUGH_VIDEO_MAX_BYTES) {
+      setVideoError(`The video exceeds the ${WALKTHROUGH_VIDEO_MAX_BYTES / (1024 * 1024)} MB limit`);
+    } else {
+      setVideo((current) => {
+        if (current) URL.revokeObjectURL(current.preview);
+        return { file, preview: URL.createObjectURL(file) };
+      });
+    }
+    // Allow re-selecting the same file after a removal.
+    if (videoInputRef.current) videoInputRef.current.value = '';
+  };
+
+  const removeVideo = () => {
+    setVideo((current) => {
+      if (current) URL.revokeObjectURL(current.preview);
+      return null;
+    });
+    setVideoError(null);
   };
 
   const removePhoto = (preview: string) => {
@@ -104,21 +141,37 @@ export default function AddListingModal({ onCreated, triggerLabel = '+ Add listi
         const files = photos.map((p) => p.file);
         await uploadListingPhotos(listing.id, files);
         await cacheListingPhotos(listing.id, files);
-        // Kick off Veo walkthrough-video generation in the background; the
-        // tour shows the photos (marked "generating") until clips land.
-        void generateWalkthroughClips(listing.id, files);
+        // Kick off Veo walkthrough-video generation in the background unless
+        // the landlord uploaded their own walkthrough video; the tour shows
+        // the photos (marked "generating") until clips land.
+        if (!video) void generateWalkthroughClips(listing.id, files);
       }
-      onCreated(listing);
-      setOpen(false);
     } catch (err) {
       // The listing exists; only the photos failed. Surface that without
       // letting a resubmit create a duplicate.
       onCreated(listing);
-      setPhotosFailed(true);
+      setUploadsFailed(true);
       setError(
         err instanceof Error
           ? `Listing created, but the photos could not be uploaded: ${err.message}`
           : 'Listing created, but the photos could not be uploaded. You can add them later.',
+      );
+      setSaving(false);
+      return;
+    }
+    try {
+      if (video) {
+        await uploadWalkthroughFile(listing.id, `${form.title.trim()} — walkthrough`, video.file);
+      }
+      onCreated(listing);
+      setOpen(false);
+    } catch (err) {
+      onCreated(listing);
+      setUploadsFailed(true);
+      setError(
+        err instanceof Error
+          ? `Listing created, but the walkthrough video could not be uploaded: ${err.message}`
+          : 'Listing created, but the walkthrough video could not be uploaded. You can add it later.',
       );
     } finally {
       setSaving(false);
@@ -206,6 +259,53 @@ export default function AddListingModal({ onCreated, triggerLabel = '+ Add listi
             )}
           </div>
 
+          <div>
+            <FieldLabel>Video walkthrough (optional)</FieldLabel>
+            <p className="mb-2 text-xs text-muted">
+              Upload a video tour of the rooms in your photos. It goes to an admin for
+              approval before it appears on Explore.
+            </p>
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept={WALKTHROUGH_VIDEO_EXTENSIONS.join(',')}
+              onChange={(e) => pickVideo(e.target.files)}
+              className="hidden"
+              aria-label="Add walkthrough video"
+            />
+            {video ? (
+              <div className="overflow-hidden rounded-lg border border-gray-200">
+                <video src={video.preview} controls playsInline className="max-h-56 w-full bg-black" />
+                <div className="flex items-center justify-between gap-2 px-3 py-2">
+                  <p className="min-w-0 truncate text-xs text-muted">
+                    {video.file.name} · {(video.file.size / (1024 * 1024)).toFixed(1)} MB
+                  </p>
+                  <button
+                    type="button"
+                    onClick={removeVideo}
+                    className="shrink-0 text-xs font-medium text-rose-600 hover:text-rose-700"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => videoInputRef.current?.click()}
+                className="flex h-20 w-full flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 text-muted transition-colors hover:border-brand hover:text-brand"
+              >
+                <span className="text-xl leading-none">+</span>
+                <span className="text-[11px]">Add video walkthrough</span>
+              </button>
+            )}
+            {videoError && (
+              <p className="mt-1.5 text-xs text-rose-600" role="alert">
+                {videoError}
+              </p>
+            )}
+          </div>
+
           {error && (
             <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-600" role="alert">
               {error}
@@ -213,7 +313,7 @@ export default function AddListingModal({ onCreated, triggerLabel = '+ Add listi
           )}
 
           <div className="flex justify-end gap-2 border-t border-gray-100 pt-4">
-            {photosFailed ? (
+            {uploadsFailed ? (
               <Button type="button" onClick={() => setOpen(false)}>
                 Close
               </Button>

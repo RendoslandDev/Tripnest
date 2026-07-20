@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   getPendingWalkthroughs, reviewWalkthrough, type PropertyWalkthroughStatusDto,
 } from '../../api/walkthroughs';
-import { getProperties } from '../../api/properties';
+import { getListingProperty } from '../../api/listings';
 import { useAsync } from '../../hooks/useAsync';
 import AsyncBoundary from '../../components/AsyncBoundary';
 import Card from '../../components/ui/Card';
@@ -16,11 +16,14 @@ interface Row extends PropertyWalkthroughStatusDto {
 // Shared by the agent and admin workspaces — both roles review walkthroughs.
 export default function WalkthroughReviewPage() {
   const state = useAsync(async (): Promise<Row[]> => {
-    const [pending, properties] = await Promise.all([getPendingWalkthroughs(), getProperties()]);
-    const titles = new Map(properties.map((p) => [p.id, p.title]));
-    return pending.map((w) => ({
-      ...w,
-      propertyTitle: titles.get(w.propertyId) ?? `Property ${w.propertyId.slice(0, 8)}`,
+    const pending = await getPendingWalkthroughs();
+    // Pending listings are still Draft, so the public active-listings feed can't
+    // name them — fetch each property record directly instead.
+    return Promise.all(pending.map(async (w) => {
+      const propertyTitle = await getListingProperty(w.propertyId)
+        .then((p) => p.title)
+        .catch(() => `Property ${w.propertyId.slice(0, 8)}`);
+      return { ...w, propertyTitle };
     }));
   });
 

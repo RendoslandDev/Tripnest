@@ -113,3 +113,8 @@ export async function suggestReply(conversationId: string | number): Promise<str
 export function markConversationRead(conversationId: string | number): Promise<unknown> {
   return apiPatch(`/api/chat/conversations/${conversationId}/mark-read`);
 }
+
+// saved chat when conversation is opened or closed
+export function saveConversation(conversationId: string | number, saved: boolean) : Promise<{ id: string; saved: boolean } | null>{
+  return apiPatch(`/api/chat/conversation/${conversationId}/saved`, {saved})
+}
